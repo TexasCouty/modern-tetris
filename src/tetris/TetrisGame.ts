@@ -89,6 +89,7 @@ function darken(hex:string, amount:number){ return alter(hex, -amount); }
 
 interface ActivePiece { type: string; rotation: number; x: number; y: number; shape: number[][]; }
 interface Particle { x:number; y:number; vx:number; vy:number; life:number; ttl:number; color:string; size:number; }
+interface LightningArc { points: {x:number; y:number;}[]; life:number; ttl:number; }
 
 // LocalStorage key for high score
 const HIGH_KEY = 'tetris_high_score';
@@ -113,6 +114,7 @@ export class TetrisGame {
   private holdUsedThisTurn = false;
   private particles: Particle[] = [];
   private flashUntil = 0;
+  private lightning: LightningArc[] = [];
 
   constructor(private options: TetrisGameOptions) {
     this.width = options.width;
@@ -189,6 +191,7 @@ export class TetrisGame {
       }
     }
     this.updateParticles(delta);
+  this.updateLightning(delta);
     this.draw();
     requestAnimationFrame(this.loop);
   };
@@ -342,7 +345,7 @@ export class TetrisGame {
       }
     }
     if (cleared>0) {
-      if (cleared === 4) this.spawnTetrisExplosion(fullRows); else this.spawnGenericLineClear(fullRows);
+  if (cleared === 4) this.spawnTetrisLightning(fullRows); else this.spawnGenericLineClear(fullRows);
       this.stats.lines += cleared;
       this.stats.score += SCORE_TABLE[cleared as 1|2|3|4] * this.stats.level;
       if (cleared === 4) this.stats.score += TETRIS_BONUS * this.stats.level;
@@ -375,25 +378,40 @@ export class TetrisGame {
     });
   }
 
-  private spawnTetrisExplosion(rows: number[]) {
+  private spawnTetrisLightning(rows: number[]) {
     const cellW = this.canvas.width / this.width;
     const cellH = this.canvas.height / this.height;
-    this.flashUntil = performance.now() + 220;
+    this.flashUntil = performance.now() + 320; // extended flash
+    const arcCount = 5 + Math.floor(Math.random()*3);
+    for (let a=0; a<arcCount; a++) {
+      const startX = Math.random()*this.canvas.width;
+      const endY = this.canvas.height;
+      const segments = 8 + Math.floor(Math.random()*4);
+      const pts: {x:number;y:number;}[] = [];
+      for (let i=0;i<=segments;i++) {
+        const t = i/segments;
+        const y = t * endY;
+        const jitter = (Math.random()-0.5)*70;
+        const x = startX + Math.sin(t*Math.PI*2)*25 + jitter;
+        pts.push({ x: Math.max(0, Math.min(this.canvas.width, x)), y });
+      }
+      this.lightning.push({ points: pts, life:0, ttl: 180 + Math.random()*120 });
+    }
     rows.forEach(r => {
       for (let c=0; c<this.width; c++) {
         const baseX = (c+0.5)*cellW;
         const baseY = (r+0.5)*cellH;
-        for (let i=0;i<30;i++) {
-          const angle = Math.random()*Math.PI*2;
-          const speed = 140 + Math.random()*260;
+        for (let i=0;i<18;i++) {
+          const ang = -Math.PI/2 + (Math.random()-0.5)*Math.PI;
+          const spd = 160 + Math.random()*260;
           this.particles.push({
             x: baseX,
             y: baseY,
-            vx: Math.cos(angle)*speed,
-            vy: Math.sin(angle)*speed - 40,
-            life:0, ttl: 900,
-            color: i%3===0? '#ffe66d' : (i%3===1? '#ffae34' : '#ffffff'),
-            size: 2 + Math.random()*4
+            vx: Math.cos(ang)*spd*0.4,
+            vy: Math.sin(ang)*spd,
+            life:0, ttl: 650 + Math.random()*300,
+            color: i%4===0? '#e0f2ff' : (i%4===1? '#7dd3fc' : (i%4===2? '#ffffff' : '#38bdf8')),
+            size: 1.6 + Math.random()*2.6
           });
         }
       }
@@ -410,6 +428,15 @@ export class TetrisGame {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.vy += 220 * dt;
+    }
+  }
+
+  private updateLightning(delta:number) {
+    if (!this.lightning.length) return;
+    for (let i=this.lightning.length-1; i>=0; i--) {
+      const arc = this.lightning[i];
+      arc.life += delta;
+      if (arc.life > arc.ttl) this.lightning.splice(i,1);
     }
   }
 
@@ -522,9 +549,46 @@ export class TetrisGame {
     this.ctx.globalAlpha = 1;
   }
 
+  private drawLightningArcs() {
+    if (!this.lightning.length) return;
+    for (const arc of this.lightning) {
+      const t = arc.life / arc.ttl;
+      const fade = 1 - t;
+      this.ctx.save();
+      this.ctx.lineJoin = 'round';
+      this.ctx.lineCap = 'round';
+      const layers = [
+        { w: 10, a: 0.12, col:'#7dd3fc' },
+        { w: 6, a: 0.25, col:'#bae6fd' },
+        { w: 3, a: 0.9*fade, col:'#e0f2ff' },
+        { w: 1.5, a: 1*fade, col:'#ffffff' }
+      ];
+      for (const layer of layers) {
+        this.ctx.beginPath();
+        for (let i=0;i<arc.points.length;i++) {
+          const pt = arc.points[i];
+          if (i===0) this.ctx.moveTo(pt.x, pt.y); else this.ctx.lineTo(pt.x, pt.y);
+        }
+        this.ctx.strokeStyle = this.applyAlpha(layer.col, layer.a * fade);
+        this.ctx.lineWidth = layer.w * (0.7 + fade*0.3);
+        this.ctx.stroke();
+      }
+      this.ctx.restore();
+    }
+  }
+
+  private applyAlpha(hex:string, a:number) {
+    if (hex.length===7) {
+      const alpha = Math.round(Math.min(1,Math.max(0,a))*255).toString(16).padStart(2,'0');
+      return hex + alpha;
+    }
+    return hex;
+  }
+
   private draw() {
     this.drawBoard();
     this.drawParticles();
+    this.drawLightningArcs();
     if (this.flashUntil && performance.now() < this.flashUntil) {
       const remain = (this.flashUntil - performance.now())/220;
       this.ctx.fillStyle = `rgba(255,255,255,${0.55*remain})`;
