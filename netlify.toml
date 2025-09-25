@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Optional: Node version; Netlify default is often fine. Uncomment to pin.
+  # NODE_VERSION = "20"
+
+# Future headers or redirects can be added here.
