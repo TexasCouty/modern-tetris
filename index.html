@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Tetris Clone</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg:#06070b;
+      --bg-accent: #101826;
+      --bg-gradient: radial-gradient(circle at 25% 20%, #1c2636 0%, #0d1117 55%, #05070a 100%);
+      --panel:#121922ee; /* translucent for glass effect */
+      --panel-border: #1e2732;
+      --panel-highlight: #2c3b4b;
+      --accent:#6366f1; /* indigo */
+      --accent-rgb:99,102,241;
+      --accent-alt:#8b5cf6; /* violet */
+      --accent-glow: #8b5cf6;
+      --danger:#ef4444;
+      --warn:#eab308;
+      --ok:#22c55e;
+      --text:#e6edf3;
+      --text-dim:#94a3b8;
+      --grid-a:#0c1219; --grid-b:#0f151d;
+      --radius-sm:4px; --radius:10px;
+      --shadow-elev:0 4px 18px -6px rgba(0,0,0,.65), 0 0 0 1px #1d2935, 0 0 0 1px rgba(255,255,255,.02) inset;
+      --focus-ring:0 0 0 2px rgba(var(--accent-rgb),.5), 0 0 0 4px rgba(var(--accent-rgb),.25);
+    }
+    * { box-sizing:border-box; }
+    html, body { height:100%; margin:0; overflow:hidden; background:var(--bg-gradient); color:var(--text); font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif; -webkit-font-smoothing:antialiased; }
+    body { display:flex; align-items:center; justify-content:center; padding:18px; }
+    #stage { position:relative; }
+    #root { display:flex; gap:40px; align-items:flex-start; animation:fadeIn .6s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px);} to {opacity:1; transform:none;} }
+    canvas { background:linear-gradient(#020305,#05080d); border-radius:var(--radius-sm); box-shadow:0 0 0 1px #1d2733, 0 0 0 2px #000 inset, 0 6px 18px -8px rgba(0,0,0,.9), 0 0 32px -8px rgba(var(--accent-rgb),.35); position:relative; }
+    #gameWrap { position:relative; border-radius:var(--radius-sm); }
+    #gameWrap::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; box-shadow:0 0 0 1px #1b2430, 0 0 0 3px rgba(var(--accent-rgb),.08), 0 0 40px -6px rgba(var(--accent-rgb),.35); mix-blend-mode:screen; }
+    .panel { width:230px; font-size:14px; background:var(--panel); padding:18px 18px 20px; border-radius:var(--radius); box-shadow:var(--shadow-elev); border:1px solid var(--panel-border); backdrop-filter:blur(14px) saturate(140%); display:flex; flex-direction:column; position:relative; }
+    .panel::before { content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(140deg, rgba(var(--accent-rgb),.18), transparent 45%); opacity:.35; pointer-events:none; }
+  h1 { font-size:24px; margin:0 0 14px; letter-spacing:1.5px; font-weight:600; background:linear-gradient(90deg,var(--accent),var(--accent-alt)); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
+  .logo-wrap { width:100%; display:flex; justify-content:center; margin:0 0 12px; }
+  .logo-wrap img { max-width:100%; width:210px; height:auto; filter:drop-shadow(0 4px 10px rgba(0,0,0,.55)); border-radius:6px; image-rendering:auto; }
+    .stats { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+    .stat { font-size:12px; margin:0; font-weight:600; letter-spacing:.5px; display:flex; justify-content:space-between; align-items:baseline; padding:6px 10px 7px; background:linear-gradient(160deg,#1a2430,#121b24 60%); border:1px solid #202c38; border-radius:6px; position:relative; overflow:hidden; }
+    .stat::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(var(--accent-rgb),.15),transparent 40%); mix-blend-mode:overlay; opacity:.55; pointer-events:none; }
+    .stat-label { opacity:.6; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.8px; }
+    .stat-val { font-family: "Consolas","Roboto Mono",monospace; font-size:18px; font-weight:700; color:#fff; text-shadow:0 0 0 transparent, 0 0 10px rgba(var(--accent-rgb),.35); }
+    .divider { height:1px; background:linear-gradient(90deg,transparent,#2c3b4b 40%,#2c3b4b 60%,transparent); margin:12px 0; opacity:.8; }
+    button { --btn-bg:linear-gradient(180deg,#1e2733,#151d25); --btn-border:#2a3846; --btn-glow:rgba(var(--accent-rgb),.45); font:600 13px/1 system-ui,Segoe UI,Roboto,sans-serif; letter-spacing:.6px; position:relative; background:var(--btn-bg); border:1px solid var(--btn-border); color:var(--text); cursor:pointer; padding:10px 14px 11px; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; gap:6px; transition:.18s background, .18s transform, .25s box-shadow; box-shadow:0 2px 4px -2px #000, 0 4px 14px -6px rgba(0,0,0,.6), 0 0 0 1px #111 inset; }
+    button::before { content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(140deg,rgba(var(--accent-rgb),.22),transparent 60%); opacity:.6; mix-blend-mode:overlay; pointer-events:none; }
+    button:hover { background:linear-gradient(180deg,#273344,#1a232c); box-shadow:0 4px 18px -6px rgba(var(--accent-rgb),.55), 0 0 0 1px rgba(var(--accent-rgb),.4) inset; }
+    button:active { transform:translateY(1px); }
+    button:focus-visible { outline:none; box-shadow:var(--focus-ring); }
+    #overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(10,14,20,.68); color:#fff; font-size:30px; font-weight:700; letter-spacing:2px; text-shadow:0 2px 8px #000; opacity:0; pointer-events:none; transition:opacity .3s; backdrop-filter:blur(6px) saturate(180%); border-radius:var(--radius-sm); }
+    #overlay.visible { opacity:1; animation:pulseOverlay 1.2s ease-in-out infinite alternate; }
+    @keyframes pulseOverlay { from { background:rgba(10,14,20,.6);} to { background:rgba(10,14,20,.8);} }
+    .foot { font-size:11px; line-height:1.5; opacity:.55; margin-top:auto; letter-spacing:.5px; }
+    .control-grid { display:grid; grid-template-columns:repeat(3,56px); grid-template-rows:repeat(2,56px); gap:10px; justify-content:start; }
+    .control-grid button { padding:0; font-size:18px; border-radius:14px; font-weight:500; }
+    .control-grid button#btnHard { font-size:20px; }
+    .control-grid button:hover { filter:brightness(1.12); }
+    a { color:var(--accent); text-decoration:none; }
+    a:hover { text-decoration:underline; }
+  /* Only stack vertically on very narrow windows (e.g., small tablet) */
+  @media (max-width: 600px) { #root { flex-direction:column; gap:28px; } body { padding:10px; } .panel { width:100%; max-width:360px; order:-1; } }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="root">
+      <div id="gameWrap">
+  <canvas id="game" width="300" height="600"></canvas>
+  <div id="overlay" class="visible">READY</div>
+      </div>
+      <div class="panel">
+        <div class="logo-wrap">
+          <img id="gameLogo" alt="Tetris Logo" decoding="async" />
+        </div>
+        <div class="stats">
+          <div id="score" class="stat"><span class="stat-label">Score</span><span id="scoreVal" class="stat-val">0</span></div>
+          <div id="level" class="stat"><span class="stat-label">Level</span><span id="levelVal" class="stat-val">1</span></div>
+          <div id="lines" class="stat"><span class="stat-label">Lines</span><span id="linesVal" class="stat-val">0</span></div>
+          <div id="highScore" class="stat"><span class="stat-label">High</span><span id="highVal" class="stat-val">0</span></div>
+        </div>
+        <div class="divider" style="margin-top:10px;"></div>
+        <button id="startBtn">Start / Pause</button>
+        <button id="resetBtn" style="margin-top:8px;">Reset</button>
+        <div class="divider" style="margin:12px 0 8px;"></div>
+        <div class="control-grid">
+          <button id="btnUp" style="grid-column:2;">▲</button>
+          <button id="btnLeft">◀</button>
+          <button id="btnDown">▼</button>
+          <button id="btnRight">▶</button>
+          <button id="btnHard" style="grid-column:3;">⤓</button>
+        </div>
+        <div class="foot" style="margin-top:12px;">
+          Keyboard: Arrows / Space / Shift / R
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Runtime remote logo injection (no local file). Priority:
+    // 1. ?logo= URL param
+    // 2. window.__TETRIS_LOGO_URL__ (can be injected by preload or env define)
+    // 3. Fallback SVG wordmark (inline)
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const paramLogo = params.get('logo');
+  const globalLogo = (window && window.__TETRIS_LOGO_URL__) || undefined;
+      const fallbackSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="220" height="54" viewBox="0 0 220 54"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#4f7ff9"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><rect width="220" height="54" rx="10" fill="rgba(255,255,255,0.04)"/><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI,Inter,Arial,sans-serif" font-size="30" font-weight="600" fill="url(#g)">TETRIS</text></svg>`);
+      const el = document.getElementById('gameLogo');
+      if(!el) return;
+      el.src = paramLogo || globalLogo || fallbackSvg;
+      el.addEventListener('error', () => { el.src = fallbackSvg; });
+    })();
+  </script>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>
