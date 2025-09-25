@@ -90,6 +90,7 @@ function darken(hex:string, amount:number){ return alter(hex, -amount); }
 interface ActivePiece { type: string; rotation: number; x: number; y: number; shape: number[][]; }
 interface Particle { x:number; y:number; vx:number; vy:number; life:number; ttl:number; color:string; size:number; }
 interface LightningArc { points: {x:number; y:number;}[]; life:number; ttl:number; }
+interface Shockwave { x:number; y:number; life:number; ttl:number; maxR:number; }
 
 // LocalStorage key for high score
 const HIGH_KEY = 'tetris_high_score';
@@ -115,6 +116,9 @@ export class TetrisGame {
   private particles: Particle[] = [];
   private flashUntil = 0;
   private lightning: LightningArc[] = [];
+  private shockwaves: Shockwave[] = [];
+  private shakeTime = 0; // ms remaining of camera shake
+  private shakeMag = 0;  // base magnitude
 
   constructor(private options: TetrisGameOptions) {
     this.width = options.width;
@@ -177,24 +181,7 @@ export class TetrisGame {
     this.spawn();
   }
 
-  private loop = (time: number) => {
-    if (!this.running) return;
-    const delta = time - this.lastTime;
-    this.lastTime = time;
-    this.dropAccumulator += delta;
-    if (this.dropAccumulator >= this.dropInterval) {
-      this.dropAccumulator = 0;
-      // Attempt gravity step; if it can't move further, lock automatically
-      const moved = this.stepDown();
-      if (!moved) {
-        this.lockPiece();
-      }
-    }
-    this.updateParticles(delta);
-  this.updateLightning(delta);
-    this.draw();
-    requestAnimationFrame(this.loop);
-  };
+  // (loop moved to end with enhanced FX handling)
 
   private refillQueue() {
     const bag = Object.keys(TETROMINOES);
@@ -382,6 +369,12 @@ export class TetrisGame {
     const cellW = this.canvas.width / this.width;
     const cellH = this.canvas.height / this.height;
     this.flashUntil = performance.now() + 320; // extended flash
+  // camera shake + shockwave center
+  this.shakeTime = 300; this.shakeMag = 8;
+  const minRow = Math.min(...rows); const maxRow = Math.max(...rows);
+  const centerY = ((minRow + maxRow)/2 + 0.5) * cellH;
+  const centerX = this.canvas.width / 2;
+  this.shockwaves.push({ x:centerX, y:centerY, life:0, ttl:420, maxR: Math.max(this.canvas.width,this.canvas.height)*0.85 });
     const arcCount = 5 + Math.floor(Math.random()*3);
     for (let a=0; a<arcCount; a++) {
       const startX = Math.random()*this.canvas.width;
@@ -440,6 +433,15 @@ export class TetrisGame {
     }
   }
 
+  private updateShockwaves(delta:number) {
+    if (!this.shockwaves.length) return;
+    for (let i=this.shockwaves.length-1; i>=0; i--) {
+      const sw = this.shockwaves[i];
+      sw.life += delta;
+      if (sw.life > sw.ttl) this.shockwaves.splice(i,1);
+    }
+  }
+
   private collides(piece: ActivePiece, x: number, y: number): boolean {
     const { shape } = piece;
     for (let r = 0; r < shape.length; r++) {
@@ -455,6 +457,24 @@ export class TetrisGame {
   }
 
   private updateStats() { this.options.onStats?.(this.stats); }
+
+  private loop = (time: number) => {
+    if (!this.running) return;
+    const delta = time - this.lastTime;
+    this.lastTime = time;
+    this.dropAccumulator += delta;
+    if (this.dropAccumulator >= this.dropInterval) {
+      this.dropAccumulator = 0;
+      const moved = this.stepDown();
+      if (!moved) this.lockPiece();
+    }
+    this.updateParticles(delta);
+    this.updateLightning(delta);
+    this.updateShockwaves(delta);
+    if (this.shakeTime > 0) this.shakeTime = Math.max(0, this.shakeTime - delta);
+    this.draw();
+    requestAnimationFrame(this.loop);
+  };
 
   private loadHigh() {
     try { const v = Number(localStorage.getItem(HIGH_KEY)); if (!isNaN(v)) this.highScore = v; } catch {}
@@ -589,10 +609,46 @@ export class TetrisGame {
     this.drawBoard();
     this.drawParticles();
     this.drawLightningArcs();
+    // Apply camera shake before drawing board & effects
+    this.ctx.save();
+    if (this.shakeTime > 0) {
+      const intensity = (this.shakeTime/300);
+      const dx = (Math.random()*2 -1) * this.shakeMag * intensity;
+      const dy = (Math.random()*2 -1) * this.shakeMag * intensity;
+      this.ctx.translate(dx, dy);
+    }
+    this.drawBoard();
+    this.drawParticles();
+    this.drawLightningArcs();
+    this.drawShockwaves();
+    this.ctx.restore();
+  // moved above (camera shake block)
+    this.drawShockwaves();
     if (this.flashUntil && performance.now() < this.flashUntil) {
       const remain = (this.flashUntil - performance.now())/220;
       this.ctx.fillStyle = `rgba(255,255,255,${0.55*remain})`;
       this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
     }
+  }
+
+  private drawShockwaves() {
+    if (!this.shockwaves.length) return;
+    const prev = this.ctx.globalCompositeOperation;
+    this.ctx.globalCompositeOperation = 'screen';
+    for (const sw of this.shockwaves) {
+      const t = sw.life / sw.ttl;
+      const r = sw.maxR * (0.15 + 0.85 * t);
+      const alpha = 1 - t;
+      const g = this.ctx.createRadialGradient(sw.x, sw.y, r*0.15, sw.x, sw.y, r);
+      g.addColorStop(0, `rgba(224,242,255,${0.25*alpha})`);
+      g.addColorStop(0.35, `rgba(125,211,252,${0.18*alpha})`);
+      g.addColorStop(0.6, `rgba(56,189,248,${0.08*alpha})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      this.ctx.beginPath();
+      this.ctx.fillStyle = g;
+      this.ctx.arc(sw.x, sw.y, r, 0, Math.PI*2);
+      this.ctx.fill();
+    }
+    this.ctx.globalCompositeOperation = prev;
   }
 }
