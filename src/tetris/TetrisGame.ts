@@ -56,16 +56,27 @@ const TETROMINOES: Record<string, number[][][]> = {
 };
 (globalThis as any).TETROMINOES = TETROMINOES;
 
-// Modern vibrant palette (inspired by contemporary UI color systems)
-const COLORS: Record<string,string> = {
-  I: '#06b6d4', // cyan
-  J: '#3b82f6', // blue
-  L: '#f97316', // orange
-  O: '#eab308', // amber
-  S: '#22c55e', // green
-  T: '#8b5cf6', // violet
-  Z: '#ef4444'  // red
+// Modernized classic metallic palette and per-piece style definitions
+// Each entry supplies nuanced shades tuned to a glossy beveled look
+interface PieceStyle { base:string; highlight:string; mid:string; shadow:string; edge:string; gloss?:string; }
+const PIECE_STYLES: Record<string, PieceStyle> = {
+  // Bright cyan core with darker beveled edges → metallic glow
+  I: { base:'#00c2d8', highlight:'#74f5ff', mid:'#00a7c1', shadow:'#006071', edge:'#003a46', gloss:'#ffffff' },
+  // Deep golden amber with subtle shading
+  O: { base:'#e7b400', highlight:'#ffe680', mid:'#d09e00', shadow:'#7d5300', edge:'#4b3000', gloss:'#ffffff' },
+  // Sleek violet with indigo shadows
+  T: { base:'#7a2fcf', highlight:'#c693ff', mid:'#6423b3', shadow:'#38135f', edge:'#1f0934', gloss:'#ffffff' },
+  // Bold amber‑orange gradient
+  L: { base:'#ef7d15', highlight:'#ffbe7a', mid:'#d76505', shadow:'#7a3300', edge:'#441b00', gloss:'#ffffff' },
+  // Strong cobalt blue with navy bevels
+  J: { base:'#1d63d3', highlight:'#8db6ff', mid:'#154fae', shadow:'#0a2c63', edge:'#051733', gloss:'#ffffff' },
+  // Emerald green with teal shading
+  S: { base:'#12af59', highlight:'#78f2b2', mid:'#0d8f48', shadow:'#05522a', edge:'#022d17', gloss:'#ffffff' },
+  // Crisp crimson with maroon shadows
+  Z: { base:'#e02028', highlight:'#ff8a92', mid:'#b7141b', shadow:'#65080c', edge:'#360406', gloss:'#ffffff' }
 };
+// Retain simple color map for any legacy usages (base colors)
+const COLORS: Record<string,string> = Object.fromEntries(Object.entries(PIECE_STYLES).map(([k,v])=>[k,v.base]));
 const SCORE_TABLE = { 1: 100, 2: 300, 3: 500, 4: 800 };
 const TETRIS_BONUS = 400; // extra bonus for 4-line clear
 
@@ -200,8 +211,9 @@ export class TetrisGame {
     this.shakeTime = 0;
     this.shakeMag = 0;
     this.refillQueue();
-    this.running = true;
-    this.spawn();
+    // Force loop re-init (game over stops it). Use start() so RAF resumes.
+    this.running = false;
+    this.start();
   }
 
   // (loop moved to end with enhanced FX handling)
@@ -507,29 +519,32 @@ export class TetrisGame {
   getHeld() { return this.held; }
 
   private drawCell(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, type: string) {
-    const base = COLORS[type];
-    // Outer body gradient (stronger contrast)
-    const outer = ctx.createLinearGradient(x, y, x, y + size);
-    outer.addColorStop(0, lighten(base, 0.55));
-    outer.addColorStop(0.35, lighten(base, 0.15));
-    outer.addColorStop(0.7, base);
-    outer.addColorStop(1, darken(base, 0.55));
-    ctx.fillStyle = outer;
+    const style = PIECE_STYLES[type];
+    const base = style.base;
+
+    // Main body vertical gradient (metallic depth)
+    const body = ctx.createLinearGradient(x, y, x, y + size);
+    body.addColorStop(0.0, style.highlight);
+    body.addColorStop(0.18, style.base);
+    body.addColorStop(0.55, style.mid);
+    body.addColorStop(1.0, style.shadow);
+    ctx.fillStyle = body;
     ctx.fillRect(x, y, size, size);
 
-    // Inset face
-    const inset = Math.max(2, Math.floor(size * 0.18));
+    // Inner inset panel
+    const inset = Math.max(2, Math.floor(size * 0.2));
     const ix = x + inset;
     const iy = y + inset;
     const isize = size - inset * 2;
-    const face = ctx.createLinearGradient(ix, iy, ix + isize, iy + isize);
-    face.addColorStop(0, lighten(base, 0.35));
-    face.addColorStop(0.45, base);
-    face.addColorStop(1, darken(base, 0.25));
+    const face = ctx.createLinearGradient(ix, iy, ix, iy + isize);
+    face.addColorStop(0, style.highlight);
+    face.addColorStop(0.4, style.base);
+    face.addColorStop(0.75, style.mid);
+    face.addColorStop(1, style.shadow);
     ctx.fillStyle = face;
     ctx.fillRect(ix, iy, isize, isize);
 
-    // Facet highlights (top) & shadows (bottom)
+    // Upper bevel triangle
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -537,50 +552,52 @@ export class TetrisGame {
     ctx.lineTo(x + size - inset, y + inset);
     ctx.lineTo(x + size, y);
     ctx.closePath();
-    ctx.fillStyle = lighten(base, 0.75);
-    ctx.globalAlpha = 0.50;
+    ctx.fillStyle = style.highlight;
+    ctx.globalAlpha = 0.45;
     ctx.fill();
 
+    // Lower bevel triangle
     ctx.beginPath();
+    ctx.globalAlpha = 0.55;
     ctx.moveTo(x, y + size);
     ctx.lineTo(x + inset, y + size - inset);
     ctx.lineTo(x + size - inset, y + size - inset);
     ctx.lineTo(x + size, y + size);
     ctx.closePath();
-    ctx.fillStyle = darken(base, 0.75);
-    ctx.globalAlpha = 0.55;
+    ctx.fillStyle = style.shadow;
     ctx.fill();
     ctx.restore();
     ctx.globalAlpha = 1;
 
-    // Edge bevel lines
-    ctx.strokeStyle = lighten(base, 0.85);
+    // Edge rim (light + dark)
+    ctx.strokeStyle = style.highlight;
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x + 0.5, y + size - 0.5);
     ctx.lineTo(x + 0.5, y + 0.5);
     ctx.lineTo(x + size - 0.5, y + 0.5);
     ctx.stroke();
-    ctx.strokeStyle = darken(base, 0.85);
+    ctx.strokeStyle = style.edge;
     ctx.beginPath();
     ctx.moveTo(x + size - 0.5, y + 0.5);
     ctx.lineTo(x + size - 0.5, y + size - 0.5);
     ctx.lineTo(x + 0.5, y + size - 0.5);
     ctx.stroke();
 
-    // Inner border for inset face
+    // Inner face border
     ctx.strokeStyle = '#00000066';
     ctx.strokeRect(ix + 0.5, iy + 0.5, isize - 1, isize - 1);
 
-    // Gloss highlight (radial, additive)
+    // Gloss highlight (radial / additive)
     const cx = x + size / 2;
     const cy = y + size / 2;
     const r = size / 2;
-    const gloss = ctx.createRadialGradient(cx, cy - r * 0.8, r * 0.1, cx, cy, r);
-    gloss.addColorStop(0, 'rgba(255,255,255,0.85)');
-    gloss.addColorStop(0.35, 'rgba(255,255,255,0.25)');
-    gloss.addColorStop(0.6, 'rgba(255,255,255,0.08)');
-    gloss.addColorStop(1, 'rgba(255,255,255,0)');
+    const glossCol = style.gloss || '#ffffff';
+    const gloss = ctx.createRadialGradient(cx, cy - r * 0.75, r * 0.05, cx, cy, r);
+    gloss.addColorStop(0, glossCol + 'ee');
+    gloss.addColorStop(0.3, glossCol + '40');
+    gloss.addColorStop(0.55, glossCol + '22');
+    gloss.addColorStop(1, glossCol + '00');
     ctx.save();
     const prev = ctx.globalCompositeOperation;
     ctx.globalCompositeOperation = 'lighter';
