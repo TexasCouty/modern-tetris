@@ -56,36 +56,202 @@ const TETROMINOES: Record<string, number[][][]> = {
 };
 (globalThis as any).TETROMINOES = TETROMINOES;
 
-// Modernized classic metallic palette and per-piece style definitions
-// Each entry supplies nuanced shades tuned to a glossy beveled look
-interface PieceStyle { base:string; highlight:string; mid:string; shadow:string; edge:string; gloss?:string; }
-const PIECE_STYLES: Record<string, PieceStyle> = {
-  // Bright cyan core with darker beveled edges → metallic glow
-  I: { base:'#00c2d8', highlight:'#74f5ff', mid:'#00a7c1', shadow:'#006071', edge:'#003a46', gloss:'#ffffff' },
-  // Deep golden amber with subtle shading
-  O: { base:'#e7b400', highlight:'#ffe680', mid:'#d09e00', shadow:'#7d5300', edge:'#4b3000', gloss:'#ffffff' },
-  // Sleek violet with indigo shadows
-  T: { base:'#7a2fcf', highlight:'#c693ff', mid:'#6423b3', shadow:'#38135f', edge:'#1f0934', gloss:'#ffffff' },
-  // Bold amber‑orange gradient
-  L: { base:'#ef7d15', highlight:'#ffbe7a', mid:'#d76505', shadow:'#7a3300', edge:'#441b00', gloss:'#ffffff' },
-  // Strong cobalt blue with navy bevels
-  J: { base:'#1d63d3', highlight:'#8db6ff', mid:'#154fae', shadow:'#0a2c63', edge:'#051733', gloss:'#ffffff' },
-  // Emerald green with teal shading
-  S: { base:'#12af59', highlight:'#78f2b2', mid:'#0d8f48', shadow:'#05522a', edge:'#022d17', gloss:'#ffffff' },
-  // Crisp crimson with maroon shadows
-  Z: { base:'#e02028', highlight:'#ff8a92', mid:'#b7141b', shadow:'#65080c', edge:'#360406', gloss:'#ffffff' }
-};
-// Retain simple color map for any legacy usages (base colors)
-const COLORS: Record<string,string> = Object.fromEntries(Object.entries(PIECE_STYLES).map(([k,v])=>[k,v.base]));
+// ===================== START PATCH: MODERN PALETTE + RENDER =====================
 
-// Rendering style configuration (allows quick iteration on visual direction)
-const RENDER_STYLE = {
-  glossy: false,           // disable radial "light source" gloss per user feedback
-  topHighlightAlpha: 0.25, // subtle top bevel intensity
-  bottomShadowAlpha: 0.35, // subtle bottom bevel
-  edgeLightBoost: 0.15,    // how much to lighten highlight stroke relative to provided highlight
-  innerPanelContrast: 0.55 // intensity of mid -> shadow blend in inner panel
+/** Per-piece style bundle so every color has coherent shades */
+export type PieceStyle = {
+  base: string;      // main body color
+  highlight: string; // bright edge/high side
+  mid: string;       // inner-face start
+  shadow: string;    // dark edge/low side
+  edge: string;      // rim line color (dark)
+  gloss: string;     // gloss tint (for additive radial)
 };
+
+/** Modernized-classic palette (cyan, yellow, purple, orange, blue, green, red)
+ * tuned to look sharp and saturated on a dark UI without cartoonish neon.
+ */
+export const PIECE_STYLES: Record<'I'|'O'|'T'|'L'|'J'|'S'|'Z', PieceStyle> = {
+  I: { base:'#18D0E6', highlight:'#5FEFFF', mid:'#18B8D0', shadow:'#0F6B85', edge:'#0A3C4A', gloss:'#9FF7FF' },
+  O: { base:'#F7C62F', highlight:'#FFE45F', mid:'#DDAE20', shadow:'#8F6A10', edge:'#4A3905', gloss:'#FFF27A' },
+  T: { base:'#7040F2', highlight:'#9A70FF', mid:'#5A2DC0', shadow:'#351A75', edge:'#220E4D', gloss:'#B699FF' },
+  L: { base:'#F2922A', highlight:'#FFB366', mid:'#D6761C', shadow:'#8C4208', edge:'#4D2203', gloss:'#FFC48A' },
+  J: { base:'#2E6CF3', highlight:'#5D95FF', mid:'#2052C8', shadow:'#0E2F73', edge:'#081946', gloss:'#7FB1FF' },
+  S: { base:'#22B366', highlight:'#4DDB8B', mid:'#1C8F52', shadow:'#0B4D2C', edge:'#042618', gloss:'#6EFFAD' },
+  Z: { base:'#E23B33', highlight:'#FF726B', mid:'#B83028', shadow:'#6A1410', edge:'#350807', gloss:'#FF9892' },
+};
+
+/** HSL helpers so shading looks natural across hues */
+function clamp01(n: number) { return Math.max(0, Math.min(1, n)); }
+function hexToRgb(hex: string) {
+  const h = hex.replace('#', '').trim();
+  const v = h.length === 3
+    ? h.split('').map(c => c + c).join('')
+    : h.padEnd(6, '0').slice(0, 6);
+  const r = parseInt(v.slice(0,2), 16);
+  const g = parseInt(v.slice(2,4), 16);
+  const b = parseInt(v.slice(4,6), 16);
+  return { r, g, b };
+}
+function rgbToHex(r: number, g: number, b: number) {
+  const to2 = (n: number) => Math.round(n).toString(16).padStart(2, '0');
+  return `#${to2(r)}${to2(g)}${to2(b)}`;
+}
+function rgbToHsl(r: number, g: number, b: number) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h = 0, s = 0; const l = (max + min) / 2;
+  const d = max - min;
+  if (d !== 0) {
+    s = l > .5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return { h, s, l };
+}
+function hslToRgb(h: number, s: number, l: number) {
+  const hue2rgb = (p: number, q: number, t: number) => {
+    if (t < 0) t += 1;
+    if (t > 1) t -= 1;
+    if (t < 1/6) return p + (q - p) * 6 * t;
+    if (t < 1/2) return q;
+    if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+    return p;
+  };
+  let r: number, g: number, b: number;
+  if (s === 0) {
+    r = g = b = l; // achromatic
+  } else {
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    r = hue2rgb(p, q, h + 1/3);
+    g = hue2rgb(p, q, h);
+    b = hue2rgb(p, q, h - 1/3);
+  }
+  return { r: r*255, g: g*255, b: b*255 };
+}
+/** Lighten/Darken by percent (positive = lighten) */
+export function lighten(hex: string, pct: number) {
+  const { r, g, b } = hexToRgb(hex);
+  const hsl = rgbToHsl(r, g, b);
+  const l = clamp01(hsl.l + (pct/100));
+  const rgb = hslToRgb(hsl.h, hsl.s, l);
+  return rgbToHex(rgb.r, rgb.g, rgb.b);
+}
+export function darken(hex: string, pct: number) {
+  return lighten(hex, -pct);
+}
+
+/** Draw a single cell with beveled edges, inset face, inner border and gloss.
+ * Uses the passed PieceStyle for consistent, “forged” depth.
+ */
+export function drawCell(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  style: PieceStyle,
+  opts?: {
+    inset?: number; // 0..1 (inner face size ratio)
+    edge?: number;  // 0..1 (bevel thickness ratio)
+    gloss?: number; // 0..1 (gloss strength)
+  }
+) {
+  const inset = opts?.inset ?? 0.26;
+  const edge  = opts?.edge  ?? 0.14;
+  const gloss = opts?.gloss ?? 0.55;
+
+  const s = size, bx = x, by = y;
+
+  // Body gradient (vertical)
+  const gBody = ctx.createLinearGradient(bx, by, bx, by + s);
+  gBody.addColorStop(0, style.highlight);
+  gBody.addColorStop(1, style.shadow);
+  ctx.fillStyle = gBody;
+  ctx.fillRect(bx, by, s, s);
+
+  // Outer dark rim
+  ctx.lineWidth = Math.max(1, Math.round(s * 0.06));
+  ctx.strokeStyle = style.edge;
+  ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
+
+  // Inner light rim
+  ctx.lineWidth = Math.max(1, Math.round(s * 0.03));
+  ctx.strokeStyle = lighten(style.base, 35);
+  ctx.strokeRect(bx + 1.5, by + 1.5, s - 3, s - 3);
+
+  // Inset face
+  const pad = Math.round(s * edge);
+  const ix = bx + pad, iy = by + pad, isz = s - pad * 2;
+
+  const gFace = ctx.createLinearGradient(ix, iy, ix + isz, iy + isz);
+  gFace.addColorStop(0, style.mid);
+  gFace.addColorStop(1, darken(style.base, 12));
+  ctx.fillStyle = gFace;
+
+  const fPad = Math.round(isz * (1 - (1 - inset)));
+  const fx = ix + fPad * 0.08;
+  const fy = iy + fPad * 0.08;
+  const fw = isz - fPad * 0.16;
+  const fh = fw;
+
+  ctx.fillRect(fx, fy, fw, fh);
+
+  // Facet highlights (subtle top bevel)
+  ctx.beginPath();
+  ctx.moveTo(bx, by);
+  ctx.lineTo(bx + s, by);
+  ctx.lineTo(bx + s - pad, by + pad);
+  ctx.lineTo(bx + pad, by + pad);
+  ctx.closePath();
+  ctx.globalAlpha = 0.18;
+  ctx.fillStyle = lighten(style.base, 22);
+  ctx.fill();
+
+  // Facet shadow (bottom bevel)
+  ctx.beginPath();
+  ctx.moveTo(bx, by + s);
+  ctx.lineTo(bx + s, by + s);
+  ctx.lineTo(bx + s - pad, by + s - pad);
+  ctx.lineTo(bx + pad, by + s - pad);
+  ctx.closePath();
+  ctx.fillStyle = darken(style.base, 28);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Inner crisp border for extra “machined” feel
+  ctx.strokeStyle = darken(style.base, 40);
+  ctx.lineWidth = Math.max(1, Math.round(s * 0.02));
+  ctx.strokeRect(fx + 0.5, fy + 0.5, fw - 1, fh - 1);
+
+  // Additive gloss highlight
+  const r = isz * 0.75;
+  const gx = ix + isz * 0.35;
+  const gy = iy + isz * 0.35;
+  const gGloss = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
+  gGloss.addColorStop(0, `${hexToRgba(style.gloss, 0.25 * gloss)}`);
+  gGloss.addColorStop(1, `${hexToRgba(style.gloss, 0)}`);
+
+  const prev = ctx.globalCompositeOperation;
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.fillStyle = gGloss;
+  ctx.beginPath();
+  ctx.arc(gx, gy, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalCompositeOperation = prev;
+}
+
+/** Convert #rrggbb to rgba(...) string with alpha */
+function hexToRgba(hex: string, a = 1) {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${clamp01(a)})`;
+}
+
+// ====================== END PATCH: MODERN PALETTE + RENDER ======================
 const SCORE_TABLE = { 1: 100, 2: 300, 3: 500, 4: 800 };
 const TETRIS_BONUS = 400; // extra bonus for 4-line clear
 
@@ -105,23 +271,7 @@ const FX = {
   }
 };
 
-function hexToRgb(hex: string) {
-  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!m) return { r:0,g:0,b:0 };
-  return { r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16) };
-}
-function clamp(v:number){ return Math.min(255, Math.max(0,v)); }
-function toHex(n:number){ return n.toString(16).padStart(2,'0'); }
-function alter(hex:string, ratio:number){
-  const {r,g,b}=hexToRgb(hex);
-  // Ensure integer channels; previous version produced fractional -> invalid hex -> invisible pieces
-  const nr = clamp(Math.round(r + r*ratio));
-  const ng = clamp(Math.round(g + g*ratio));
-  const nb = clamp(Math.round(b + b*ratio));
-  return `#${toHex(nr)}${toHex(ng)}${toHex(nb)}`;
-}
-function lighten(hex:string, amount:number){ return alter(hex, amount); }
-function darken(hex:string, amount:number){ return alter(hex, -amount); }
+// (legacy lighten/darken helpers removed – replaced by HSL versions in patch above)
 
 interface ActivePiece { type: string; rotation: number; x: number; y: number; shape: number[][]; }
 interface Particle { x:number; y:number; vx:number; vy:number; life:number; ttl:number; color:string; size:number; }
@@ -527,110 +677,7 @@ export class TetrisGame {
   getHighScore() { return this.highScore; }
   getHeld() { return this.held; }
 
-  private drawCell(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, type: string) {
-    const style = PIECE_STYLES[type];
-    const base = style.base;
-
-    // Main body vertical gradient (metallic depth)
-    const body = ctx.createLinearGradient(x, y, x, y + size);
-    // Flattened contrast: reduce bright highlight & deep shadow for a sharper, “hard anodized” look
-    body.addColorStop(0.0, style.highlight);
-    body.addColorStop(0.25, style.base);
-    body.addColorStop(0.6, style.mid);
-    body.addColorStop(1.0, style.shadow);
-    ctx.fillStyle = body;
-    ctx.fillRect(x, y, size, size);
-
-    // Inner inset panel
-    const inset = Math.max(2, Math.floor(size * 0.2));
-    const ix = x + inset;
-    const iy = y + inset;
-    const isize = size - inset * 2;
-    const face = ctx.createLinearGradient(ix, iy, ix, iy + isize);
-    const panelMidBlend = RENDER_STYLE.innerPanelContrast;
-    face.addColorStop(0, style.highlight);
-    face.addColorStop(0.35, style.base);
-    face.addColorStop(0.65, style.mid);
-    face.addColorStop(1, this.mix(style.mid, style.shadow, panelMidBlend));
-    ctx.fillStyle = face;
-    ctx.fillRect(ix, iy, isize, isize);
-
-    // Upper bevel triangle
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + inset, y + inset);
-    ctx.lineTo(x + size - inset, y + inset);
-    ctx.lineTo(x + size, y);
-    ctx.closePath();
-    ctx.fillStyle = style.highlight;
-    ctx.globalAlpha = RENDER_STYLE.topHighlightAlpha;
-    ctx.fill();
-
-    // Lower bevel triangle
-    ctx.beginPath();
-    ctx.globalAlpha = RENDER_STYLE.bottomShadowAlpha;
-    ctx.moveTo(x, y + size);
-    ctx.lineTo(x + inset, y + size - inset);
-    ctx.lineTo(x + size - inset, y + size - inset);
-    ctx.lineTo(x + size, y + size);
-    ctx.closePath();
-    ctx.fillStyle = style.shadow;
-    ctx.fill();
-    ctx.restore();
-    ctx.globalAlpha = 1;
-
-    // Edge rim (light + dark)
-    ctx.strokeStyle = this.mix(style.highlight, '#ffffff', RENDER_STYLE.edgeLightBoost);
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(x + 0.5, y + size - 0.5);
-    ctx.lineTo(x + 0.5, y + 0.5);
-    ctx.lineTo(x + size - 0.5, y + 0.5);
-    ctx.stroke();
-    ctx.strokeStyle = style.edge;
-    ctx.beginPath();
-    ctx.moveTo(x + size - 0.5, y + 0.5);
-    ctx.lineTo(x + size - 0.5, y + size - 0.5);
-    ctx.lineTo(x + 0.5, y + size - 0.5);
-    ctx.stroke();
-
-    // Inner face border
-    ctx.strokeStyle = '#00000066';
-    ctx.strokeRect(ix + 0.5, iy + 0.5, isize - 1, isize - 1);
-
-    if (RENDER_STYLE.glossy) {
-      // Optional subdued gloss (disabled by default per user request to remove "light on them")
-      const cx = x + size / 2;
-      const cy = y + size / 2;
-      const r = size / 2;
-      const glossCol = style.gloss || '#ffffff';
-      const gloss = ctx.createRadialGradient(cx, cy - r * 0.7, r * 0.05, cx, cy + r * 0.2, r);
-      gloss.addColorStop(0, glossCol + '55');
-      gloss.addColorStop(0.35, glossCol + '22');
-      gloss.addColorStop(0.7, glossCol + '08');
-      gloss.addColorStop(1, glossCol + '00');
-      ctx.save();
-      const prev = ctx.globalCompositeOperation;
-      ctx.globalCompositeOperation = 'lighter';
-      ctx.fillStyle = gloss;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalCompositeOperation = prev;
-      ctx.restore();
-    }
-  }
-
-  // Utility: simple color mix (hex to rgb and back) for subtle derived shades
-  private mix(a:string, b:string, t:number) {
-    const ar = parseInt(a.slice(1,3),16), ag = parseInt(a.slice(3,5),16), ab = parseInt(a.slice(5,7),16);
-    const br = parseInt(b.slice(1,3),16), bg = parseInt(b.slice(3,5),16), bb = parseInt(b.slice(5,7),16);
-    const rr = Math.round(ar + (br-ar)*t).toString(16).padStart(2,'0');
-    const rg = Math.round(ag + (bg-ag)*t).toString(16).padStart(2,'0');
-    const rb = Math.round(ab + (bb-ab)*t).toString(16).padStart(2,'0');
-    return `#${rr}${rg}${rb}`;
-  }
+  // (legacy drawCell + mix removed; new global drawCell & palette in patch above)
 
   private drawBoard() {
     const cw = this.canvas.width / this.width;
@@ -639,7 +686,7 @@ export class TetrisGame {
     for (let r=0; r<this.height; r++) {
       for (let c=0; c<this.width; c++) {
         const cell = this.board[r][c];
-        if (cell) this.drawCell(this.ctx, c*cw, r*ch, cw, cell);
+  if (cell) drawCell(this.ctx, c*cw, r*ch, cw, PIECE_STYLES[cell as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
         else {
           this.ctx.fillStyle = (r+c)%2===0 ? '#050505' : '#0a0a0a';
           this.ctx.fillRect(c*cw, r*ch, cw, ch);
@@ -653,7 +700,7 @@ export class TetrisGame {
           if (shape[r][c]) {
             const px = (x + c) * cw;
             const py = (y + r) * ch;
-            this.drawCell(this.ctx, px, py, cw, type);
+            drawCell(this.ctx, px, py, cw, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
           }
         }
       }
@@ -675,7 +722,7 @@ export class TetrisGame {
           if (shape[r][c]) {
             const x = offsetX + c*size;
             const y = offsetY + r*size;
-            this.drawCell(this.nextCtx as CanvasRenderingContext2D, x, y, size, type);
+            drawCell(this.nextCtx as CanvasRenderingContext2D, x, y, size, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
           }
         }
       }
