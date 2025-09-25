@@ -192,6 +192,13 @@ export class TetrisGame {
     this.nextQueue = [];
     this.held = null;
     this.holdUsedThisTurn = false;
+    // Fully clear visual/effect state so a restart after GAME OVER is clean
+    this.particles = [];
+    this.lightning = [];
+    this.shockwaves = [];
+    this.flashUntil = 0;
+    this.shakeTime = 0;
+    this.shakeMag = 0;
     this.refillQueue();
     this.running = true;
     this.spawn();

@@ -92,6 +92,7 @@ function togglePauseUi() {
 function restartGame() {
   game.reset();
   overlay.classList.remove('visible');
+  overlay.textContent = '';
   startBtn.textContent = 'Pause';
   gameOverFlag = false;
 }
