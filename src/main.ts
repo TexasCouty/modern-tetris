@@ -27,6 +27,8 @@ const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement;
 
 const overlay = document.getElementById('overlay') as HTMLDivElement;
 
+let gameOverFlag = false;
+
 const game = new TetrisGame({
   width: 10,
   height: 20,
@@ -42,12 +44,15 @@ const game = new TetrisGame({
     startBtn.textContent = 'Game Over - Restart (Space)';
     overlay.textContent = 'GAME OVER';
     overlay.classList.add('visible');
+    gameOverFlag = true;
   }
 });
 
 startBtn.textContent = 'Start';
-startBtn.addEventListener('click', () => togglePauseUi());
-resetBtn.addEventListener('click', () => { game.reset(); overlay.classList.remove('visible'); startBtn.textContent = 'Pause'; });
+startBtn.addEventListener('click', () => {
+  if (gameOverFlag) restartGame(); else togglePauseUi();
+});
+resetBtn.addEventListener('click', () => { restartGame(); });
 btnUp.addEventListener('click', () => game.rotateCW());
 btnLeft.addEventListener('click', () => game.moveLeft());
 btnRight.addEventListener('click', () => game.moveRight());
@@ -55,8 +60,11 @@ btnDown.addEventListener('click', () => game.dropSoft());
 btnHard.addEventListener('click', () => game.dropHard());
 
 document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') { e.preventDefault(); togglePauseUi(); }
-  if (e.key === 'r' || e.key === 'R') { game.reset(); }
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (gameOverFlag) restartGame(); else togglePauseUi();
+  }
+  if (e.key === 'r' || e.key === 'R') { restartGame(); }
 });
 
 // Do not auto-start; wait for user to press Start
@@ -69,6 +77,7 @@ function togglePauseUi() {
     overlay.classList.remove('visible');
     startBtn.textContent = 'Pause';
     game.start();
+    gameOverFlag = false;
     return;
   }
   game.togglePause();
@@ -78,6 +87,13 @@ function togglePauseUi() {
     overlay.textContent = 'PAUSED';
     overlay.classList.add('visible');
   }
+}
+
+function restartGame() {
+  game.reset();
+  overlay.classList.remove('visible');
+  startBtn.textContent = 'Pause';
+  gameOverFlag = false;
 }
 
 function gameRunning(): boolean {

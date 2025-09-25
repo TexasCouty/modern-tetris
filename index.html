@@ -35,7 +35,8 @@
     canvas { background:linear-gradient(#020305,#05080d); border-radius:var(--radius-sm); box-shadow:0 0 0 1px #1d2733, 0 0 0 2px #000 inset, 0 6px 18px -8px rgba(0,0,0,.9), 0 0 32px -8px rgba(var(--accent-rgb),.35); position:relative; }
     #gameWrap { position:relative; border-radius:var(--radius-sm); }
     #gameWrap::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; box-shadow:0 0 0 1px #1b2430, 0 0 0 3px rgba(var(--accent-rgb),.08), 0 0 40px -6px rgba(var(--accent-rgb),.35); mix-blend-mode:screen; }
-    .panel { width:230px; font-size:14px; background:var(--panel); padding:18px 18px 20px; border-radius:var(--radius); box-shadow:var(--shadow-elev); border:1px solid var(--panel-border); backdrop-filter:blur(14px) saturate(140%); display:flex; flex-direction:column; position:relative; }
+  /* Panel width aligned with game canvas (300px) so scoreboard and playfield share same visual width */
+  .panel { width:300px; font-size:14px; background:var(--panel); padding:18px 18px 20px; border-radius:var(--radius); box-shadow:var(--shadow-elev); border:1px solid var(--panel-border); backdrop-filter:blur(14px) saturate(140%); display:flex; flex-direction:column; position:relative; }
     .panel::before { content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(140deg, rgba(var(--accent-rgb),.18), transparent 45%); opacity:.35; pointer-events:none; }
   h1 { font-size:24px; margin:0 0 14px; letter-spacing:1.5px; font-weight:600; background:linear-gradient(90deg,var(--accent),var(--accent-alt)); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
   .logo-wrap { width:100%; display:flex; justify-content:center; margin:0 0 12px; }

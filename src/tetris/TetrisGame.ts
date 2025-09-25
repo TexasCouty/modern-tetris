@@ -69,6 +69,22 @@ const COLORS: Record<string,string> = {
 const SCORE_TABLE = { 1: 100, 2: 300, 3: 500, 4: 800 };
 const TETRIS_BONUS = 400; // extra bonus for 4-line clear
 
+// FX tuning (reduced lightning intensity)
+const FX = {
+  tetris: {
+    flash: 220,
+    shakeTime: 180,
+    shakeMag: 5,
+    arcsMin: 3,
+    arcsMax: 4,
+    arcSegMin: 6,
+    arcSegMax: 8,
+    particlesPerCell: 8,
+    shockwaveTtl: 360,
+    shockwaveRadiusFactor: 0.65
+  }
+};
+
 function hexToRgb(hex: string) {
   const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!m) return { r:0,g:0,b:0 };
@@ -368,43 +384,43 @@ export class TetrisGame {
   private spawnTetrisLightning(rows: number[]) {
     const cellW = this.canvas.width / this.width;
     const cellH = this.canvas.height / this.height;
-    this.flashUntil = performance.now() + 320; // extended flash
-  // camera shake + shockwave center
-  this.shakeTime = 300; this.shakeMag = 8;
+    this.flashUntil = performance.now() + FX.tetris.flash;
+    // reduced camera shake
+    this.shakeTime = FX.tetris.shakeTime; this.shakeMag = FX.tetris.shakeMag;
   const minRow = Math.min(...rows); const maxRow = Math.max(...rows);
   const centerY = ((minRow + maxRow)/2 + 0.5) * cellH;
   const centerX = this.canvas.width / 2;
-  this.shockwaves.push({ x:centerX, y:centerY, life:0, ttl:420, maxR: Math.max(this.canvas.width,this.canvas.height)*0.85 });
-    const arcCount = 5 + Math.floor(Math.random()*3);
+    this.shockwaves.push({ x:centerX, y:centerY, life:0, ttl:FX.tetris.shockwaveTtl, maxR: Math.max(this.canvas.width,this.canvas.height)*FX.tetris.shockwaveRadiusFactor });
+    const arcCount = FX.tetris.arcsMin + Math.floor(Math.random() * (FX.tetris.arcsMax - FX.tetris.arcsMin + 1));
     for (let a=0; a<arcCount; a++) {
       const startX = Math.random()*this.canvas.width;
       const endY = this.canvas.height;
-      const segments = 8 + Math.floor(Math.random()*4);
+      const segments = FX.tetris.arcSegMin + Math.floor(Math.random() * (FX.tetris.arcSegMax - FX.tetris.arcSegMin + 1));
       const pts: {x:number;y:number;}[] = [];
       for (let i=0;i<=segments;i++) {
         const t = i/segments;
         const y = t * endY;
-        const jitter = (Math.random()-0.5)*70;
-        const x = startX + Math.sin(t*Math.PI*2)*25 + jitter;
+        const jitter = (Math.random()-0.5)*50;
+        const x = startX + Math.sin(t*Math.PI*2)*18 + jitter;
         pts.push({ x: Math.max(0, Math.min(this.canvas.width, x)), y });
       }
-      this.lightning.push({ points: pts, life:0, ttl: 180 + Math.random()*120 });
+      this.lightning.push({ points: pts, life:0, ttl: 140 + Math.random()*90 });
     }
     rows.forEach(r => {
       for (let c=0; c<this.width; c++) {
         const baseX = (c+0.5)*cellW;
         const baseY = (r+0.5)*cellH;
-        for (let i=0;i<18;i++) {
-          const ang = -Math.PI/2 + (Math.random()-0.5)*Math.PI;
-          const spd = 160 + Math.random()*260;
+        for (let i=0;i<FX.tetris.particlesPerCell;i++) {
+          const ang = -Math.PI/2 + (Math.random()-0.5)*Math.PI*0.9;
+          const spd = 140 + Math.random()*200;
           this.particles.push({
             x: baseX,
             y: baseY,
             vx: Math.cos(ang)*spd*0.4,
             vy: Math.sin(ang)*spd,
-            life:0, ttl: 650 + Math.random()*300,
-            color: i%4===0? '#e0f2ff' : (i%4===1? '#7dd3fc' : (i%4===2? '#ffffff' : '#38bdf8')),
-            size: 1.6 + Math.random()*2.6
+            life:0, ttl: 520 + Math.random()*220,
+            color: i%3===0? '#dbeafe' : (i%3===1? '#93c5fd' : '#ffffff'),
+            size: 1.4 + Math.random()*2.2
           });
         }
       }
@@ -485,25 +501,88 @@ export class TetrisGame {
 
   private drawCell(ctx: CanvasRenderingContext2D, x: number, y: number, size: number, type: string) {
     const base = COLORS[type];
-    const grad = ctx.createLinearGradient(x, y, x, y + size);
-    grad.addColorStop(0, lighten(base, 0.35));
-    grad.addColorStop(0.45, base);
-    grad.addColorStop(1, darken(base, 0.35));
-    ctx.fillStyle = grad;
+    // Outer body gradient (stronger contrast)
+    const outer = ctx.createLinearGradient(x, y, x, y + size);
+    outer.addColorStop(0, lighten(base, 0.55));
+    outer.addColorStop(0.35, lighten(base, 0.15));
+    outer.addColorStop(0.7, base);
+    outer.addColorStop(1, darken(base, 0.55));
+    ctx.fillStyle = outer;
     ctx.fillRect(x, y, size, size);
-    // Bevel highlight
-    ctx.strokeStyle = lighten(base, 0.55);
+
+    // Inset face
+    const inset = Math.max(2, Math.floor(size * 0.18));
+    const ix = x + inset;
+    const iy = y + inset;
+    const isize = size - inset * 2;
+    const face = ctx.createLinearGradient(ix, iy, ix + isize, iy + isize);
+    face.addColorStop(0, lighten(base, 0.35));
+    face.addColorStop(0.45, base);
+    face.addColorStop(1, darken(base, 0.25));
+    ctx.fillStyle = face;
+    ctx.fillRect(ix, iy, isize, isize);
+
+    // Facet highlights (top) & shadows (bottom)
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(x+1,y+size-1); ctx.lineTo(x+1,y+1); ctx.lineTo(x+size-1,y+1);
-    ctx.stroke();
-    // Bevel shadow
-    ctx.strokeStyle = darken(base, 0.55);
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + inset, y + inset);
+    ctx.lineTo(x + size - inset, y + inset);
+    ctx.lineTo(x + size, y);
+    ctx.closePath();
+    ctx.fillStyle = lighten(base, 0.75);
+    ctx.globalAlpha = 0.50;
+    ctx.fill();
+
     ctx.beginPath();
-    ctx.moveTo(x+size-1,y+1); ctx.lineTo(x+size-1,y+size-1); ctx.lineTo(x+1,y+size-1);
+    ctx.moveTo(x, y + size);
+    ctx.lineTo(x + inset, y + size - inset);
+    ctx.lineTo(x + size - inset, y + size - inset);
+    ctx.lineTo(x + size, y + size);
+    ctx.closePath();
+    ctx.fillStyle = darken(base, 0.75);
+    ctx.globalAlpha = 0.55;
+    ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+
+    // Edge bevel lines
+    ctx.strokeStyle = lighten(base, 0.85);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x + 0.5, y + size - 0.5);
+    ctx.lineTo(x + 0.5, y + 0.5);
+    ctx.lineTo(x + size - 0.5, y + 0.5);
     ctx.stroke();
-    // Inner stroke
-    ctx.strokeStyle = '#00000055';
-    ctx.strokeRect(x+0.5, y+0.5, size-1, size-1);
+    ctx.strokeStyle = darken(base, 0.85);
+    ctx.beginPath();
+    ctx.moveTo(x + size - 0.5, y + 0.5);
+    ctx.lineTo(x + size - 0.5, y + size - 0.5);
+    ctx.lineTo(x + 0.5, y + size - 0.5);
+    ctx.stroke();
+
+    // Inner border for inset face
+    ctx.strokeStyle = '#00000066';
+    ctx.strokeRect(ix + 0.5, iy + 0.5, isize - 1, isize - 1);
+
+    // Gloss highlight (radial, additive)
+    const cx = x + size / 2;
+    const cy = y + size / 2;
+    const r = size / 2;
+    const gloss = ctx.createRadialGradient(cx, cy - r * 0.8, r * 0.1, cx, cy, r);
+    gloss.addColorStop(0, 'rgba(255,255,255,0.85)');
+    gloss.addColorStop(0.35, 'rgba(255,255,255,0.25)');
+    gloss.addColorStop(0.6, 'rgba(255,255,255,0.08)');
+    gloss.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.save();
+    const prev = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'lighter';
+    ctx.fillStyle = gloss;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = prev;
+    ctx.restore();
   }
 
   private drawBoard() {
@@ -578,10 +657,10 @@ export class TetrisGame {
       this.ctx.lineJoin = 'round';
       this.ctx.lineCap = 'round';
       const layers = [
-        { w: 10, a: 0.12, col:'#7dd3fc' },
-        { w: 6, a: 0.25, col:'#bae6fd' },
-        { w: 3, a: 0.9*fade, col:'#e0f2ff' },
-        { w: 1.5, a: 1*fade, col:'#ffffff' }
+        { w: 6, a: 0.08, col:'#7dd3fc' },
+        { w: 4, a: 0.18, col:'#bae6fd' },
+        { w: 2, a: 0.75*fade, col:'#e0f2ff' },
+        { w: 1, a: 0.9*fade, col:'#ffffff' }
       ];
       for (const layer of layers) {
         this.ctx.beginPath();
