@@ -77,6 +77,15 @@ const PIECE_STYLES: Record<string, PieceStyle> = {
 };
 // Retain simple color map for any legacy usages (base colors)
 const COLORS: Record<string,string> = Object.fromEntries(Object.entries(PIECE_STYLES).map(([k,v])=>[k,v.base]));
+
+// Rendering style configuration (allows quick iteration on visual direction)
+const RENDER_STYLE = {
+  glossy: false,           // disable radial "light source" gloss per user feedback
+  topHighlightAlpha: 0.25, // subtle top bevel intensity
+  bottomShadowAlpha: 0.35, // subtle bottom bevel
+  edgeLightBoost: 0.15,    // how much to lighten highlight stroke relative to provided highlight
+  innerPanelContrast: 0.55 // intensity of mid -> shadow blend in inner panel
+};
 const SCORE_TABLE = { 1: 100, 2: 300, 3: 500, 4: 800 };
 const TETRIS_BONUS = 400; // extra bonus for 4-line clear
 
@@ -524,9 +533,10 @@ export class TetrisGame {
 
     // Main body vertical gradient (metallic depth)
     const body = ctx.createLinearGradient(x, y, x, y + size);
+    // Flattened contrast: reduce bright highlight & deep shadow for a sharper, “hard anodized” look
     body.addColorStop(0.0, style.highlight);
-    body.addColorStop(0.18, style.base);
-    body.addColorStop(0.55, style.mid);
+    body.addColorStop(0.25, style.base);
+    body.addColorStop(0.6, style.mid);
     body.addColorStop(1.0, style.shadow);
     ctx.fillStyle = body;
     ctx.fillRect(x, y, size, size);
@@ -537,10 +547,11 @@ export class TetrisGame {
     const iy = y + inset;
     const isize = size - inset * 2;
     const face = ctx.createLinearGradient(ix, iy, ix, iy + isize);
+    const panelMidBlend = RENDER_STYLE.innerPanelContrast;
     face.addColorStop(0, style.highlight);
-    face.addColorStop(0.4, style.base);
-    face.addColorStop(0.75, style.mid);
-    face.addColorStop(1, style.shadow);
+    face.addColorStop(0.35, style.base);
+    face.addColorStop(0.65, style.mid);
+    face.addColorStop(1, this.mix(style.mid, style.shadow, panelMidBlend));
     ctx.fillStyle = face;
     ctx.fillRect(ix, iy, isize, isize);
 
@@ -553,12 +564,12 @@ export class TetrisGame {
     ctx.lineTo(x + size, y);
     ctx.closePath();
     ctx.fillStyle = style.highlight;
-    ctx.globalAlpha = 0.45;
+    ctx.globalAlpha = RENDER_STYLE.topHighlightAlpha;
     ctx.fill();
 
     // Lower bevel triangle
     ctx.beginPath();
-    ctx.globalAlpha = 0.55;
+    ctx.globalAlpha = RENDER_STYLE.bottomShadowAlpha;
     ctx.moveTo(x, y + size);
     ctx.lineTo(x + inset, y + size - inset);
     ctx.lineTo(x + size - inset, y + size - inset);
@@ -570,7 +581,7 @@ export class TetrisGame {
     ctx.globalAlpha = 1;
 
     // Edge rim (light + dark)
-    ctx.strokeStyle = style.highlight;
+    ctx.strokeStyle = this.mix(style.highlight, '#ffffff', RENDER_STYLE.edgeLightBoost);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(x + 0.5, y + size - 0.5);
@@ -588,25 +599,37 @@ export class TetrisGame {
     ctx.strokeStyle = '#00000066';
     ctx.strokeRect(ix + 0.5, iy + 0.5, isize - 1, isize - 1);
 
-    // Gloss highlight (radial / additive)
-    const cx = x + size / 2;
-    const cy = y + size / 2;
-    const r = size / 2;
-    const glossCol = style.gloss || '#ffffff';
-    const gloss = ctx.createRadialGradient(cx, cy - r * 0.75, r * 0.05, cx, cy, r);
-    gloss.addColorStop(0, glossCol + 'ee');
-    gloss.addColorStop(0.3, glossCol + '40');
-    gloss.addColorStop(0.55, glossCol + '22');
-    gloss.addColorStop(1, glossCol + '00');
-    ctx.save();
-    const prev = ctx.globalCompositeOperation;
-    ctx.globalCompositeOperation = 'lighter';
-    ctx.fillStyle = gloss;
-    ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalCompositeOperation = prev;
-    ctx.restore();
+    if (RENDER_STYLE.glossy) {
+      // Optional subdued gloss (disabled by default per user request to remove "light on them")
+      const cx = x + size / 2;
+      const cy = y + size / 2;
+      const r = size / 2;
+      const glossCol = style.gloss || '#ffffff';
+      const gloss = ctx.createRadialGradient(cx, cy - r * 0.7, r * 0.05, cx, cy + r * 0.2, r);
+      gloss.addColorStop(0, glossCol + '55');
+      gloss.addColorStop(0.35, glossCol + '22');
+      gloss.addColorStop(0.7, glossCol + '08');
+      gloss.addColorStop(1, glossCol + '00');
+      ctx.save();
+      const prev = ctx.globalCompositeOperation;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = gloss;
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = prev;
+      ctx.restore();
+    }
+  }
+
+  // Utility: simple color mix (hex to rgb and back) for subtle derived shades
+  private mix(a:string, b:string, t:number) {
+    const ar = parseInt(a.slice(1,3),16), ag = parseInt(a.slice(3,5),16), ab = parseInt(a.slice(5,7),16);
+    const br = parseInt(b.slice(1,3),16), bg = parseInt(b.slice(3,5),16), bb = parseInt(b.slice(5,7),16);
+    const rr = Math.round(ar + (br-ar)*t).toString(16).padStart(2,'0');
+    const rg = Math.round(ag + (bg-ag)*t).toString(16).padStart(2,'0');
+    const rb = Math.round(ab + (bb-ab)*t).toString(16).padStart(2,'0');
+    return `#${rr}${rg}${rb}`;
   }
 
   private drawBoard() {
