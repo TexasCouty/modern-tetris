@@ -72,13 +72,14 @@ export type PieceStyle = {
  * tuned to look sharp and saturated on a dark UI without cartoonish neon.
  */
 export const PIECE_STYLES: Record<'I'|'O'|'T'|'L'|'J'|'S'|'Z', PieceStyle> = {
-  I: { base:'#18D0E6', highlight:'#5FEFFF', mid:'#18B8D0', shadow:'#0F6B85', edge:'#0A3C4A', gloss:'#9FF7FF' },
-  O: { base:'#F7C62F', highlight:'#FFE45F', mid:'#DDAE20', shadow:'#8F6A10', edge:'#4A3905', gloss:'#FFF27A' },
-  T: { base:'#7040F2', highlight:'#9A70FF', mid:'#5A2DC0', shadow:'#351A75', edge:'#220E4D', gloss:'#B699FF' },
-  L: { base:'#F2922A', highlight:'#FFB366', mid:'#D6761C', shadow:'#8C4208', edge:'#4D2203', gloss:'#FFC48A' },
-  J: { base:'#2E6CF3', highlight:'#5D95FF', mid:'#2052C8', shadow:'#0E2F73', edge:'#081946', gloss:'#7FB1FF' },
-  S: { base:'#22B366', highlight:'#4DDB8B', mid:'#1C8F52', shadow:'#0B4D2C', edge:'#042618', gloss:'#6EFFAD' },
-  Z: { base:'#E23B33', highlight:'#FF726B', mid:'#B83028', shadow:'#6A1410', edge:'#350807', gloss:'#FF9892' },
+  // Classic guideline-inspired flat colors
+  I: { base:'#00F0F0', highlight:'#00F0F0', mid:'#00F0F0', shadow:'#00F0F0', edge:'#00F0F0', gloss:'#00F0F0' },
+  O: { base:'#F0F000', highlight:'#F0F000', mid:'#F0F000', shadow:'#F0F000', edge:'#F0F000', gloss:'#F0F000' },
+  T: { base:'#A000F0', highlight:'#A000F0', mid:'#A000F0', shadow:'#A000F0', edge:'#A000F0', gloss:'#A000F0' },
+  L: { base:'#F0A000', highlight:'#F0A000', mid:'#F0A000', shadow:'#F0A000', edge:'#F0A000', gloss:'#F0A000' },
+  J: { base:'#0000F0', highlight:'#0000F0', mid:'#0000F0', shadow:'#0000F0', edge:'#0000F0', gloss:'#0000F0' },
+  S: { base:'#00F000', highlight:'#00F000', mid:'#00F000', shadow:'#00F000', edge:'#00F000', gloss:'#00F000' },
+  Z: { base:'#F00000', highlight:'#F00000', mid:'#F00000', shadow:'#F00000', edge:'#F00000', gloss:'#F00000' },
 };
 
 /** HSL helpers so shading looks natural across hues */
@@ -162,56 +163,24 @@ export function drawCell(
   }
 ) {
   const s = size; const bx = x; const by = y;
-  // Base solid fill
+  // Basic classic: flat fill + single darker outer outline + light top/left accents.
   ctx.fillStyle = style.base;
   ctx.fillRect(bx, by, s, s);
-  // Revised bevel: no white overlays; use lighter/darker shades of the piece color only.
-  // This removes the "white squares" while preserving depth.
-  const pad = Math.max(2, Math.round(s * 0.22));
-  // Top band (lighter)
-  ctx.fillStyle = lighten(style.base, 10);
-  ctx.fillRect(bx, by, s, pad);
-  // Left band (slightly more light)
-  ctx.fillStyle = lighten(style.base, 16);
-  ctx.fillRect(bx, by, pad, s);
-  // Bottom shadow band
-  ctx.fillStyle = darken(style.base, 20);
-  ctx.fillRect(bx, by + s - pad, s, pad);
-  // Right shadow band (darker)
-  ctx.fillStyle = darken(style.base, 30);
-  ctx.fillRect(bx + s - pad, by, pad, s);
-  // Corner soften: overlay small diagonal blends (using semi‑transparent dark/light derived colors)
-  const diag = Math.max(1, Math.round(pad * 0.55));
-  const lightDiag = lighten(style.base, 14);
-  const darkDiag = darken(style.base, 28);
-  ctx.fillStyle = lightDiag + '80'; // add alpha (~50%) if hex
-  try {
-    // top-left corner triangle
-    ctx.beginPath();
-    ctx.moveTo(bx, by);
-    ctx.lineTo(bx + pad, by);
-    ctx.lineTo(bx, by + pad);
-    ctx.closePath();
-    ctx.fill();
-    // bottom-right corner triangle
-    ctx.fillStyle = darkDiag + '80';
-    ctx.beginPath();
-    ctx.moveTo(bx + s, by + s);
-    ctx.lineTo(bx + s - pad, by + s);
-    ctx.lineTo(bx + s, by + s - pad);
-    ctx.closePath();
-    ctx.fill();
-  } catch {}
-
-  // Outer border
-  ctx.strokeStyle = darken(style.base, 25);
+  // Outline
+  ctx.strokeStyle = darken(style.base, 40);
   ctx.lineWidth = 1;
   ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
-
-  // Inner subtle outline (light) to keep geometry crisp when stacked
-  const inner = Math.max(1, Math.round(s * 0.28));
-  ctx.strokeStyle = lighten(style.base, 18);
-  ctx.strokeRect(bx + inner + 0.5, by + inner + 0.5, s - 2*inner - 1, s - 2*inner - 1);
+  // Top highlight line
+  ctx.beginPath();
+  ctx.strokeStyle = lighten(style.base, 35);
+  ctx.moveTo(bx + 1, by + 1.5);
+  ctx.lineTo(bx + s - 1, by + 1.5);
+  ctx.stroke();
+  // Left highlight line
+  ctx.beginPath();
+  ctx.moveTo(bx + 1.5, by + 1);
+  ctx.lineTo(bx + 1.5, by + s - 1);
+  ctx.stroke();
 }
 
 /** Convert #rrggbb to rgba(...) string with alpha */
