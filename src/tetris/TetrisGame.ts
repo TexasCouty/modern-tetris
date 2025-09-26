@@ -71,8 +71,8 @@ export type PieceStyle = {
 /** Modernized-classic palette (cyan, yellow, purple, orange, blue, green, red)
  * tuned to look sharp and saturated on a dark UI without cartoonish neon.
  */
-export const PIECE_STYLES: Record<'I'|'O'|'T'|'L'|'J'|'S'|'Z', PieceStyle> = {
-  // Classic guideline-inspired flat colors
+// Classic flat palette (guideline-like)
+export const CLASSIC_PIECE_STYLES: Record<'I'|'O'|'T'|'L'|'J'|'S'|'Z', PieceStyle> = {
   I: { base:'#00F0F0', highlight:'#00F0F0', mid:'#00F0F0', shadow:'#00F0F0', edge:'#00F0F0', gloss:'#00F0F0' },
   O: { base:'#F0F000', highlight:'#F0F000', mid:'#F0F000', shadow:'#F0F000', edge:'#F0F000', gloss:'#F0F000' },
   T: { base:'#A000F0', highlight:'#A000F0', mid:'#A000F0', shadow:'#A000F0', edge:'#A000F0', gloss:'#A000F0' },
@@ -81,6 +81,19 @@ export const PIECE_STYLES: Record<'I'|'O'|'T'|'L'|'J'|'S'|'Z', PieceStyle> = {
   S: { base:'#00F000', highlight:'#00F000', mid:'#00F000', shadow:'#00F000', edge:'#00F000', gloss:'#00F000' },
   Z: { base:'#F00000', highlight:'#F00000', mid:'#F00000', shadow:'#F00000', edge:'#F00000', gloss:'#F00000' },
 };
+
+// Modern balanced palette (slightly desaturated / deeper tones for dark UI)
+export const MODERN_PIECE_STYLES: Record<'I'|'O'|'T'|'L'|'J'|'S'|'Z', PieceStyle> = {
+  I: { base:'#16C7DA', highlight:'#16C7DA', mid:'#16C7DA', shadow:'#16C7DA', edge:'#16C7DA', gloss:'#16C7DA' },
+  O: { base:'#E9C542', highlight:'#E9C542', mid:'#E9C542', shadow:'#E9C542', edge:'#E9C542', gloss:'#E9C542' },
+  T: { base:'#8656F4', highlight:'#8656F4', mid:'#8656F4', shadow:'#8656F4', edge:'#8656F4', gloss:'#8656F4' },
+  L: { base:'#F28C33', highlight:'#F28C33', mid:'#F28C33', shadow:'#F28C33', edge:'#F28C33', gloss:'#F28C33' },
+  J: { base:'#2F6DF6', highlight:'#2F6DF6', mid:'#2F6DF6', shadow:'#2F6DF6', edge:'#2F6DF6', gloss:'#2F6DF6' },
+  S: { base:'#23B770', highlight:'#23B770', mid:'#23B770', shadow:'#23B770', edge:'#23B770', gloss:'#23B770' },
+  Z: { base:'#E14242', highlight:'#E14242', mid:'#E14242', shadow:'#E14242', edge:'#E14242', gloss:'#E14242' },
+};
+
+type StyleMode = 'classic' | 'modern';
 
 /** HSL helpers so shading looks natural across hues */
 function clamp01(n: number) { return Math.max(0, Math.min(1, n)); }
@@ -150,7 +163,7 @@ export function darken(hex: string, pct: number) {
 /** Draw a single cell with beveled edges, inset face, inner border and gloss.
  * Uses the passed PieceStyle for consistent, “forged” depth.
  */
-export function drawCell(
+function drawCellClassic(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
@@ -163,24 +176,53 @@ export function drawCell(
   }
 ) {
   const s = size; const bx = x; const by = y;
-  // Basic classic: flat fill + single darker outer outline + light top/left accents.
-  ctx.fillStyle = style.base;
+  ctx.fillStyle = style.base; ctx.fillRect(bx, by, s, s);
+  ctx.strokeStyle = darken(style.base, 40); ctx.lineWidth = 1; ctx.strokeRect(bx+0.5, by+0.5, s-1, s-1);
+  ctx.beginPath(); ctx.strokeStyle = lighten(style.base, 35); ctx.moveTo(bx+1, by+1.5); ctx.lineTo(bx+s-1, by+1.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx+1.5, by+1); ctx.lineTo(bx+1.5, by+s-1); ctx.stroke();
+}
+
+function drawCellModern(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+  style: PieceStyle
+) {
+  const s = size; const bx = x; const by = y;
+  // Drop shadow (directional) behind piece
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  ctx.fillRect(bx+1, by+s, s-2, 1); // bottom
+  ctx.fillRect(bx+s, by+1, 1, s-2); // right
+  ctx.restore();
+  // Base
+  ctx.fillStyle = style.base; ctx.fillRect(bx, by, s, s);
+  // Split lighter top portion (gives subtle plane)
+  const topH = Math.max(2, Math.round(s*0.42));
+  ctx.fillStyle = lighten(style.base, 8);
+  ctx.fillRect(bx, by, s, topH);
+  // Inset inner border for definition
+  ctx.strokeStyle = darken(style.base, 35); ctx.lineWidth = 1; ctx.strokeRect(bx+0.5, by+0.5, s-1, s-1);
+  // Inner inset line
+  ctx.strokeStyle = darken(style.base, 18);
+  ctx.strokeRect(bx+1.5, by+1.5, s-3, s-3);
+  // Micro highlight edge (top/left)
+  ctx.beginPath(); ctx.strokeStyle = lighten(style.base, 18); ctx.moveTo(bx+1, by+1); ctx.lineTo(bx+s-1, by+1); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bx+1, by+1); ctx.lineTo(bx+1, by+s-1); ctx.stroke();
+  // Subtle gradient overlay (very faint) using globalAlpha to avoid banding (optional)
+  const g = ctx.createLinearGradient(bx, by, bx, by+s);
+  g.addColorStop(0, 'rgba(255,255,255,0.04)');
+  g.addColorStop(0.7, 'rgba(0,0,0,0.07)');
+  g.addColorStop(1, 'rgba(0,0,0,0.12)');
+  ctx.fillStyle = g;
   ctx.fillRect(bx, by, s, s);
-  // Outline
-  ctx.strokeStyle = darken(style.base, 40);
-  ctx.lineWidth = 1;
-  ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
-  // Top highlight line
-  ctx.beginPath();
-  ctx.strokeStyle = lighten(style.base, 35);
-  ctx.moveTo(bx + 1, by + 1.5);
-  ctx.lineTo(bx + s - 1, by + 1.5);
-  ctx.stroke();
-  // Left highlight line
-  ctx.beginPath();
-  ctx.moveTo(bx + 1.5, by + 1);
-  ctx.lineTo(bx + 1.5, by + s - 1);
-  ctx.stroke();
+}
+
+// Unified draw dispatcher
+function drawCellMode(ctx:CanvasRenderingContext2D, x:number, y:number, size:number, style:PieceStyle, mode:StyleMode) {
+  if (mode === 'modern') return drawCellModern(ctx,x,y,size,style);
+  return drawCellClassic(ctx,x,y,size,style);
 }
 
 /** Convert #rrggbb to rgba(...) string with alpha */
@@ -247,6 +289,8 @@ export class TetrisGame {
   private rowPuffs: { x:number; y:number; life:number; ttl:number; r:number; maxR:number; color:string; }[] = [];
   // Interpolation progress for smoother falling render (0..1 each gravity step)
   private fallProgress = 0;
+  private styleMode: StyleMode = 'modern';
+  private get palette() { return this.styleMode === 'modern' ? MODERN_PIECE_STYLES : CLASSIC_PIECE_STYLES; }
 
   constructor(private options: TetrisGameOptions) {
     this.width = options.width;
@@ -275,9 +319,9 @@ export class TetrisGame {
         case 'ArrowLeft': this.move(-1); break;
         case 'ArrowRight': this.move(1); break;
         case 'ArrowUp': this.rotate(); break;
-        case 'ArrowDown': this.softDrop(); break;
         case 'Shift': this.hardDrop(); break;
         case 'c': case 'C': this.hold(); break;
+        case 'm': case 'M': this.toggleStyleMode(); break;
       }
     });
   }
@@ -388,13 +432,15 @@ export class TetrisGame {
       for (const shift of [-1, 1, -2, 2]) {
         if (!this.collides(test, test.x + shift, test.y)) {
           this.current.x += shift;
-          this.current.rotation = nextRotation;
           this.current.shape = shape;
           break;
         }
       }
     }
   }
+
+  setStyleMode(mode:StyleMode) { if (this.styleMode !== mode) { this.styleMode = mode; } }
+  toggleStyleMode() { this.styleMode = this.styleMode === 'modern' ? 'classic' : 'modern'; }
 
   private softDrop() {
     if (!this.current) return;
@@ -475,8 +521,7 @@ export class TetrisGame {
       }
     }
     if (cleared>0) {
-  if (cleared === 4) this.spawnTetrisLightning(fullRows); else this.spawnGenericLineClear(fullRows);
-      this.stats.lines += cleared;
+        if (cleared === 4) this.spawnTetrisLightning(fullRows); else this.spawnGenericLineClear(fullRows);
       this.stats.score += SCORE_TABLE[cleared as 1|2|3|4] * this.stats.level;
       if (cleared === 4) this.stats.score += TETRIS_BONUS * this.stats.level;
       const newLevel = Math.floor(this.stats.lines / 10) + 1;
@@ -639,17 +684,16 @@ export class TetrisGame {
   getHighScore() { return this.highScore; }
   getHeld() { return this.held; }
 
-  // (legacy drawCell + mix removed; new global drawCell & palette in patch above)
-
   private drawBoard() {
     const cw = this.canvas.width / this.width;
     const ch = this.canvas.height / this.height;
     this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
     for (let r=0; r<this.height; r++) {
       for (let c=0; c<this.width; c++) {
-        const cell = this.board[r][c];
-  if (cell) drawCell(this.ctx, c*cw, r*ch, cw, PIECE_STYLES[cell as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
-        else {
+        const cellVal = this.board[r][c];
+        if (cellVal) {
+          drawCellMode(this.ctx, c*cw, r*ch, cw, this.palette[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'], this.styleMode);
+        } else {
           this.ctx.fillStyle = (r+c)%2===0 ? '#050505' : '#0a0a0a';
           this.ctx.fillRect(c*cw, r*ch, cw, ch);
         }
@@ -661,13 +705,11 @@ export class TetrisGame {
         for (let c=0; c<shape[r].length; c++) {
           if (shape[r][c]) {
             const px = (x + c) * cw;
-            // Smooth interpolation: only apply to base y (not per block) so rows stay aligned
             const py = (y + r + this.fallProgress) * ch;
-            drawCell(this.ctx, px, py, cw, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
+            drawCellMode(this.ctx, px, py, cw, this.palette[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'], this.styleMode);
           }
         }
       }
-      // ghost piece removed per user request
     }
   }
 
@@ -685,7 +727,7 @@ export class TetrisGame {
           if (shape[r][c]) {
             const x = offsetX + c*size;
             const y = offsetY + r*size;
-            drawCell(this.nextCtx as CanvasRenderingContext2D, x, y, size, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
+            drawCellMode(this.nextCtx as CanvasRenderingContext2D, x, y, size, this.palette[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'], this.styleMode);
           }
         }
       }
