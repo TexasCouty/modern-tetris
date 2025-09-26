@@ -165,35 +165,43 @@ export function drawCell(
   // Base solid fill
   ctx.fillStyle = style.base;
   ctx.fillRect(bx, by, s, s);
-
-  // Flat-color bevel: use translucent white/black overlays instead of gradients so hue stays constant.
-  const pad = Math.max(2, Math.round(s * 0.18));
-
-  // Top-left highlight polygon
-  ctx.beginPath();
-  ctx.moveTo(bx, by);
-  ctx.lineTo(bx + s, by);
-  ctx.lineTo(bx + s - pad, by + pad);
-  ctx.lineTo(bx + pad, by + pad);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(255,255,255,0.16)';
-  ctx.fill();
-
-  // Left side vertical highlight (slim) for extra edge definition
-  ctx.fillStyle = 'rgba(255,255,255,0.10)';
-  ctx.fillRect(bx, by + pad, 1, s - pad*2);
-
-  // Bottom-right shadow polygon
-  ctx.beginPath();
-  ctx.moveTo(bx, by + s);
-  ctx.lineTo(bx + s, by + s);
-  ctx.lineTo(bx + s, by);
-  ctx.lineTo(bx + s - pad, by + pad);
-  ctx.lineTo(bx + s - pad, by + s - pad);
-  ctx.lineTo(bx + pad, by + s - pad);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.fill();
+  // Revised bevel: no white overlays; use lighter/darker shades of the piece color only.
+  // This removes the "white squares" while preserving depth.
+  const pad = Math.max(2, Math.round(s * 0.22));
+  // Top band (lighter)
+  ctx.fillStyle = lighten(style.base, 10);
+  ctx.fillRect(bx, by, s, pad);
+  // Left band (slightly more light)
+  ctx.fillStyle = lighten(style.base, 16);
+  ctx.fillRect(bx, by, pad, s);
+  // Bottom shadow band
+  ctx.fillStyle = darken(style.base, 20);
+  ctx.fillRect(bx, by + s - pad, s, pad);
+  // Right shadow band (darker)
+  ctx.fillStyle = darken(style.base, 30);
+  ctx.fillRect(bx + s - pad, by, pad, s);
+  // Corner soften: overlay small diagonal blends (using semi‑transparent dark/light derived colors)
+  const diag = Math.max(1, Math.round(pad * 0.55));
+  const lightDiag = lighten(style.base, 14);
+  const darkDiag = darken(style.base, 28);
+  ctx.fillStyle = lightDiag + '80'; // add alpha (~50%) if hex
+  try {
+    // top-left corner triangle
+    ctx.beginPath();
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx + pad, by);
+    ctx.lineTo(bx, by + pad);
+    ctx.closePath();
+    ctx.fill();
+    // bottom-right corner triangle
+    ctx.fillStyle = darkDiag + '80';
+    ctx.beginPath();
+    ctx.moveTo(bx + s, by + s);
+    ctx.lineTo(bx + s - pad, by + s);
+    ctx.lineTo(bx + s, by + s - pad);
+    ctx.closePath();
+    ctx.fill();
+  } catch {}
 
   // Outer border
   ctx.strokeStyle = darken(style.base, 25);
@@ -202,7 +210,7 @@ export function drawCell(
 
   // Inner subtle outline (light) to keep geometry crisp when stacked
   const inner = Math.max(1, Math.round(s * 0.28));
-  ctx.strokeStyle = lighten(style.base, 15);
+  ctx.strokeStyle = lighten(style.base, 18);
   ctx.strokeRect(bx + inner + 0.5, by + inner + 0.5, s - 2*inner - 1, s - 2*inner - 1);
 }
 

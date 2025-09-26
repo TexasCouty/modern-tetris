@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Tetris Clone</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
   <style>
     :root {
       --bg:#06070b;
@@ -127,7 +127,12 @@
     a { color:var(--accent); text-decoration:none; }
     a:hover { text-decoration:underline; }
   /* Only stack vertically on very narrow windows (e.g., small tablet) */
-  @media (max-width: 600px) { #root { flex-direction:column; gap:28px; } body { padding:10px; } .panel { width:100%; max-width:360px; order:-1; } }
+  /* Earlier collapse for small phones */
+  @media (max-width: 520px) { #root { flex-direction:column; gap:22px; } body { padding:10px; } .panel { width:100%; max-width:400px; order:-1; padding-left:0; } #gameWrap { margin-right:0; } .panel::before { display:none; } }
+  /* Ultra narrow fallback */
+  @media (max-width: 380px) { canvas { width:240px; height:480px; } }
+  /* Prevent accidental scroll / bounce when interacting */
+  canvas, .control-grid, button { touch-action:none; -webkit-touch-callout:none; }
   </style>
 </head>
 <body>
@@ -230,6 +235,27 @@
     })();
   </script>
   <script type="module" src="/src/main.ts"></script>
+  <script>
+    // Basic mobile button press repeat for left/right (minimal, does not affect desktop)
+    (function(){
+      const btnL = document.getElementById('btnLeft');
+      const btnR = document.getElementById('btnRight');
+      const btnD = document.getElementById('btnDown');
+      if(!btnL||!btnR||!btnD) return;
+      function repeater(el, fire){
+        let t, hold=false;
+        const start = (e)=>{ e.preventDefault(); fire(); hold=true; let delay=260; const loop=()=>{ if(!hold) return; fire(); delay = Math.max(55, delay*0.75); t=setTimeout(loop, delay); }; t=setTimeout(loop, delay); };
+        const end=()=>{ hold=false; if(t) clearTimeout(t); };
+        el.addEventListener('pointerdown', start, {passive:false});
+        window.addEventListener('pointerup', end);
+        window.addEventListener('pointercancel', end);
+      }
+      // Expose simple commands through custom events to main.ts (decoupled)
+      repeater(btnL, ()=>window.dispatchEvent(new CustomEvent('tetris-btn-left')));
+      repeater(btnR, ()=>window.dispatchEvent(new CustomEvent('tetris-btn-right')));
+      repeater(btnD, ()=>window.dispatchEvent(new CustomEvent('tetris-btn-down')));
+    })();
+  </script>
   <script>
     // Equalize heights: match game card height to .panel (right side) once images/fonts load
     function syncHeights(){

@@ -67,6 +67,11 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'r' || e.key === 'R') { restartGame(); }
 });
 
+// Mobile custom event wiring (added for touch repeat without altering desktop logic)
+window.addEventListener('tetris-btn-left', ()=> game.moveLeft());
+window.addEventListener('tetris-btn-right', ()=> game.moveRight());
+window.addEventListener('tetris-btn-down', ()=> game.dropSoft());
+
 // Do not auto-start; wait for user to press Start
 
 // Simple hold canvas draw loop (poll game state). Could be optimized with events.
