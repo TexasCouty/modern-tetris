@@ -30,14 +30,17 @@
     html, body { height:100%; margin:0; overflow:hidden; background:var(--bg-gradient); color:var(--text); font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif; -webkit-font-smoothing:antialiased; }
     body { display:flex; align-items:center; justify-content:center; padding:18px; }
     #stage { position:relative; }
-    #root { display:flex; gap:40px; align-items:flex-start; animation:fadeIn .6s ease; }
+  #root { display:flex; gap:40px; align-items:flex-start; animation:fadeIn .6s ease; }
+  /* Unified shell: remove card separation and wrap both sides inside one glass panel */
+  #root.app-shell { gap:0; background:var(--panel); border:1px solid var(--panel-border); border-radius:var(--radius); box-shadow:var(--shadow-elev); backdrop-filter:blur(14px) saturate(140%); padding:22px 28px 26px; position:relative; }
+  #root.app-shell::before { content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(140deg, rgba(var(--accent-rgb),.18), transparent 55%); opacity:.38; pointer-events:none; }
     @keyframes fadeIn { from { opacity:0; transform:translateY(8px);} to {opacity:1; transform:none;} }
     canvas { background:linear-gradient(#020305,#05080d); border-radius:var(--radius-sm); box-shadow:0 0 0 1px #1d2733, 0 0 0 2px #000 inset, 0 6px 18px -8px rgba(0,0,0,.9), 0 0 32px -8px rgba(var(--accent-rgb),.35); position:relative; }
-    #gameWrap { position:relative; border-radius:var(--radius-sm); }
-    #gameWrap::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; box-shadow:0 0 0 1px #1b2430, 0 0 0 3px rgba(var(--accent-rgb),.08), 0 0 40px -6px rgba(var(--accent-rgb),.35); mix-blend-mode:screen; }
+  #gameWrap { position:relative; border-radius:var(--radius-sm); margin-right:34px; }
+  #gameWrap::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; box-shadow:0 0 0 1px #1b2430, 0 0 0 2px #000 inset; mix-blend-mode:normal; }
   /* Panel width aligned with game canvas (300px) so scoreboard and playfield share same visual width */
-  .panel { width:300px; font-size:14px; background:var(--panel); padding:18px 18px 20px; border-radius:var(--radius); box-shadow:var(--shadow-elev); border:1px solid var(--panel-border); backdrop-filter:blur(14px) saturate(140%); display:flex; flex-direction:column; position:relative; }
-    .panel::before { content:""; position:absolute; inset:0; border-radius:inherit; background:linear-gradient(140deg, rgba(var(--accent-rgb),.18), transparent 45%); opacity:.35; pointer-events:none; }
+  .panel { width:300px; font-size:14px; background:transparent; padding:0 0 0 34px; border-radius:0; box-shadow:none; border:none; display:flex; flex-direction:column; position:relative; }
+    .panel::before { content:""; position:absolute; left:0; top:0; bottom:0; width:1px; background:#1e2732; box-shadow:1px 0 0 #0b0f14; pointer-events:none; }
   h1 { font-size:24px; margin:0 0 14px; letter-spacing:1.5px; font-weight:600; background:linear-gradient(90deg,var(--accent),var(--accent-alt)); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
   .logo-wrap { width:100%; display:flex; justify-content:center; margin:0 0 12px; }
   .logo-wrap img { max-width:100%; width:210px; height:auto; filter:drop-shadow(0 4px 10px rgba(0,0,0,.55)); border-radius:6px; image-rendering:auto; }
@@ -129,7 +132,7 @@
 </head>
 <body>
   <div id="stage">
-    <div id="root">
+  <div id="root" class="app-shell">
       <div id="gameWrap" class="card-equal">
         <canvas id="game" width="300" height="600"></canvas>
         <div id="overlay" class="visible">READY</div>

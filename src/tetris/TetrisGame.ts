@@ -161,88 +161,49 @@ export function drawCell(
     gloss?: number; // 0..1 (gloss strength)
   }
 ) {
-  const inset = opts?.inset ?? 0.26;
-  const edge  = opts?.edge  ?? 0.14;
-  const gloss = opts?.gloss ?? 0.55;
-
-  const s = size, bx = x, by = y;
-
-  // Body gradient (vertical)
-  const gBody = ctx.createLinearGradient(bx, by, bx, by + s);
-  gBody.addColorStop(0, style.highlight);
-  gBody.addColorStop(1, style.shadow);
-  ctx.fillStyle = gBody;
+  const s = size; const bx = x; const by = y;
+  // Base solid fill
+  ctx.fillStyle = style.base;
   ctx.fillRect(bx, by, s, s);
 
-  // Outer dark rim
-  ctx.lineWidth = Math.max(1, Math.round(s * 0.06));
-  ctx.strokeStyle = style.edge;
-  ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
+  // Flat-color bevel: use translucent white/black overlays instead of gradients so hue stays constant.
+  const pad = Math.max(2, Math.round(s * 0.18));
 
-  // Inner light rim
-  ctx.lineWidth = Math.max(1, Math.round(s * 0.03));
-  ctx.strokeStyle = lighten(style.base, 35);
-  ctx.strokeRect(bx + 1.5, by + 1.5, s - 3, s - 3);
-
-  // Inset face
-  const pad = Math.round(s * edge);
-  const ix = bx + pad, iy = by + pad, isz = s - pad * 2;
-
-  const gFace = ctx.createLinearGradient(ix, iy, ix + isz, iy + isz);
-  gFace.addColorStop(0, style.mid);
-  gFace.addColorStop(1, darken(style.base, 12));
-  ctx.fillStyle = gFace;
-
-  const fPad = Math.round(isz * (1 - (1 - inset)));
-  const fx = ix + fPad * 0.08;
-  const fy = iy + fPad * 0.08;
-  const fw = isz - fPad * 0.16;
-  const fh = fw;
-
-  ctx.fillRect(fx, fy, fw, fh);
-
-  // Facet highlights (subtle top bevel)
+  // Top-left highlight polygon
   ctx.beginPath();
   ctx.moveTo(bx, by);
   ctx.lineTo(bx + s, by);
   ctx.lineTo(bx + s - pad, by + pad);
   ctx.lineTo(bx + pad, by + pad);
   ctx.closePath();
-  ctx.globalAlpha = 0.18;
-  ctx.fillStyle = lighten(style.base, 22);
+  ctx.fillStyle = 'rgba(255,255,255,0.16)';
   ctx.fill();
 
-  // Facet shadow (bottom bevel)
+  // Left side vertical highlight (slim) for extra edge definition
+  ctx.fillStyle = 'rgba(255,255,255,0.10)';
+  ctx.fillRect(bx, by + pad, 1, s - pad*2);
+
+  // Bottom-right shadow polygon
   ctx.beginPath();
   ctx.moveTo(bx, by + s);
   ctx.lineTo(bx + s, by + s);
+  ctx.lineTo(bx + s, by);
+  ctx.lineTo(bx + s - pad, by + pad);
   ctx.lineTo(bx + s - pad, by + s - pad);
   ctx.lineTo(bx + pad, by + s - pad);
   ctx.closePath();
-  ctx.fillStyle = darken(style.base, 28);
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
   ctx.fill();
-  ctx.globalAlpha = 1;
 
-  // Inner crisp border for extra “machined” feel
-  ctx.strokeStyle = darken(style.base, 40);
-  ctx.lineWidth = Math.max(1, Math.round(s * 0.02));
-  ctx.strokeRect(fx + 0.5, fy + 0.5, fw - 1, fh - 1);
+  // Outer border
+  ctx.strokeStyle = darken(style.base, 25);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
 
-  // Additive gloss highlight
-  const r = isz * 0.75;
-  const gx = ix + isz * 0.35;
-  const gy = iy + isz * 0.35;
-  const gGloss = ctx.createRadialGradient(gx, gy, 0, gx, gy, r);
-  gGloss.addColorStop(0, `${hexToRgba(style.gloss, 0.25 * gloss)}`);
-  gGloss.addColorStop(1, `${hexToRgba(style.gloss, 0)}`);
-
-  const prev = ctx.globalCompositeOperation;
-  ctx.globalCompositeOperation = 'lighter';
-  ctx.fillStyle = gGloss;
-  ctx.beginPath();
-  ctx.arc(gx, gy, r, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalCompositeOperation = prev;
+  // Inner subtle outline (light) to keep geometry crisp when stacked
+  const inner = Math.max(1, Math.round(s * 0.28));
+  ctx.strokeStyle = lighten(style.base, 15);
+  ctx.strokeRect(bx + inner + 0.5, by + inner + 0.5, s - 2*inner - 1, s - 2*inner - 1);
 }
 
 /** Convert #rrggbb to rgba(...) string with alpha */
