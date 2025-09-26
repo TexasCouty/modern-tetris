@@ -30,11 +30,7 @@ if %ERRORLEVEL%==0 (
   tar -a -c -f "%ARCHIVE%" --exclude=node_modules --exclude=dist --exclude=backups --exclude=.git .
 ) else (
   echo tar not found. Falling back to PowerShell Compress-Archive...
-  powershell -NoLogo -NoProfile -Command ^
-    "$items = Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '\\node_modules\\|\\dist\\|\\backups\\|\\\.git\\' }; ^
-     if(-not $items){ Write-Host 'No files found to archive (after exclusions).'; exit 0 } ^
-     $paths = $items | ForEach-Object { $_.FullName }; ^
-     Compress-Archive -Path $paths -DestinationPath '%ARCHIVE%' -Force"
+  powershell -NoLogo -NoProfile -Command "$ErrorActionPreference='Stop'; $items = Get-ChildItem -Recurse -File | Where-Object { $_.FullName -notmatch '\\node_modules\\|\\dist\\|\\backups\\|\\\.git\\' }; if(-not $items){ Write-Host 'No files found to archive (after exclusions).'; exit 0 }; Compress-Archive -Path ($items.FullName) -DestinationPath '%ARCHIVE%' -Force;"
 )
 
 IF NOT EXIST "%ARCHIVE%" (
