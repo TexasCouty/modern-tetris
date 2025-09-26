@@ -181,6 +181,52 @@
       const candidate = paramLogo || globalLogo || '/logo.png';
       el.src = candidate;
       el.addEventListener('error', () => { el.src = fallbackSvg; });
+      // After the logo loads, if it's a raster image with a bright (white) outline, replace those outline pixels
+      // with a darker tone derived from the interior average color for a flatter modern look.
+      el.addEventListener('load', () => {
+        if(el.dataset.processed) return; // avoid double work
+        // Skip SVG data URIs (already vector without white stroke)
+        if(/^data:image\/svg/.test(el.src)) return;
+        try {
+          const canvas = document.createElement('canvas');
+          const w = canvas.width = el.naturalWidth || el.width;
+          const h = canvas.height = el.naturalHeight || el.height;
+          if(!w || !h) return; // nothing to do
+          const ctx = canvas.getContext('2d', { willReadFrequently:true });
+          ctx.drawImage(el, 0, 0);
+          let imgData;
+          try { imgData = ctx.getImageData(0,0,w,h); } catch(e){ return; } // likely cross-origin taint
+          const d = imgData.data;
+          let sumR=0,sumG=0,sumB=0,count=0;
+          // First pass: gather average of non-white, non-transparent interior pixels
+          for(let i=0;i<d.length;i+=4){
+            const a = d[i+3]; if(a < 180) continue; // ignore near transparent
+            const r=d[i],g=d[i+1],b=d[i+2];
+            if(r>215 && g>215 && b>215) continue; // skip near-white (potential outline)
+            sumR+=r; sumG+=g; sumB+=b; count++;
+          }
+            if(!count) return; // can't derive palette
+          const avgR=sumR/count, avgG=sumG/count, avgB=sumB/count;
+          // Create a darker stroke color ~35% brightness of average (but keep some saturation)
+          const darken = c => Math.max(0, Math.min(255, Math.round(c*0.38)));
+          const strokeR = darken(avgR);
+          const strokeG = darken(avgG);
+          const strokeB = darken(avgB);
+          // Second pass: remap near-white pixels to stroke color while preserving alpha
+          for(let i=0;i<d.length;i+=4){
+            const a = d[i+3]; if(a < 50) continue; // skip mostly transparent
+            const r=d[i],g=d[i+1],b=d[i+2];
+            if(r>215 && g>215 && b>215){
+              d[i] = strokeR;
+              d[i+1] = strokeG;
+              d[i+2] = strokeB;
+            }
+          }
+          ctx.putImageData(imgData,0,0);
+          el.src = canvas.toDataURL('image/png');
+          el.dataset.processed = 'true';
+        } catch(err){ /* silent fallback */ }
+      });
     })();
   </script>
   <script type="module" src="/src/main.ts"></script>
