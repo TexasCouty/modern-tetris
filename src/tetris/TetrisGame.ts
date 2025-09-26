@@ -305,6 +305,10 @@ export class TetrisGame {
   private shockwaves: Shockwave[] = [];
   private shakeTime = 0; // ms remaining of camera shake
   private shakeMag = 0;  // base magnitude
+  // Row puff FX (lightning/smoke bursts for Tetris clears)
+  private rowPuffs: { x:number; y:number; life:number; ttl:number; r:number; maxR:number; color:string; }[] = [];
+  // Interpolation progress for smoother falling render (0..1 each gravity step)
+  private fallProgress = 0;
 
   constructor(private options: TetrisGameOptions) {
     this.width = options.width;
@@ -461,6 +465,9 @@ export class TetrisGame {
     } else {
       this.stats.score += 1; // soft drop reward
       this.updateStats();
+      // Reset progress so interpolation restarts from new cell
+      this.dropAccumulator = 0;
+      this.fallProgress = 0;
     }
   }
 
@@ -470,6 +477,8 @@ export class TetrisGame {
     while (this.stepDown()) distance++;
     this.stats.score += distance * 2; // hard drop reward
     this.lockPiece();
+    this.dropAccumulator = 0;
+    this.fallProgress = 0;
   }
 
   private stepDown(): boolean {
@@ -496,6 +505,8 @@ export class TetrisGame {
     }
     this.clearLines();
     this.spawn();
+    this.dropAccumulator = 0;
+    this.fallProgress = 0;
   }
 
   private hold() {
@@ -560,46 +571,37 @@ export class TetrisGame {
   }
 
   private spawnTetrisLightning(rows: number[]) {
+    // Replaced with localized row FX: small lightning puffs + sparks, no full-screen arcs
     const cellW = this.canvas.width / this.width;
     const cellH = this.canvas.height / this.height;
-    this.flashUntil = performance.now() + FX.tetris.flash;
-    // reduced camera shake
-    this.shakeTime = FX.tetris.shakeTime; this.shakeMag = FX.tetris.shakeMag;
-  const minRow = Math.min(...rows); const maxRow = Math.max(...rows);
-  const centerY = ((minRow + maxRow)/2 + 0.5) * cellH;
-  const centerX = this.canvas.width / 2;
-    this.shockwaves.push({ x:centerX, y:centerY, life:0, ttl:FX.tetris.shockwaveTtl, maxR: Math.max(this.canvas.width,this.canvas.height)*FX.tetris.shockwaveRadiusFactor });
-    const arcCount = FX.tetris.arcsMin + Math.floor(Math.random() * (FX.tetris.arcsMax - FX.tetris.arcsMin + 1));
-    for (let a=0; a<arcCount; a++) {
-      const startX = Math.random()*this.canvas.width;
-      const endY = this.canvas.height;
-      const segments = FX.tetris.arcSegMin + Math.floor(Math.random() * (FX.tetris.arcSegMax - FX.tetris.arcSegMin + 1));
-      const pts: {x:number;y:number;}[] = [];
-      for (let i=0;i<=segments;i++) {
-        const t = i/segments;
-        const y = t * endY;
-        const jitter = (Math.random()-0.5)*50;
-        const x = startX + Math.sin(t*Math.PI*2)*18 + jitter;
-        pts.push({ x: Math.max(0, Math.min(this.canvas.width, x)), y });
-      }
-      this.lightning.push({ points: pts, life:0, ttl: 140 + Math.random()*90 });
-    }
+    this.flashUntil = 0; // no screen flash
+    this.shakeTime = 0;  // no camera shake
+    this.lightning = []; // not used anymore
+    this.shockwaves = [];
     rows.forEach(r => {
-      for (let c=0; c<this.width; c++) {
+      const rowYMid = (r + 0.5) * cellH;
+      // Puffs across the row
+      const puffCount = 3;
+      for (let i=0;i<puffCount;i++) {
+        const x = (0.15 + (i/(puffCount-1))*0.7) * this.canvas.width + (Math.random()-0.5)*cellW*0.5;
+        const ttl = 420 + Math.random()*180;
+        this.rowPuffs.push({ x, y: rowYMid, life:0, ttl, r:0, maxR: cellH*0.9, color:'#9ddcff' });
+      }
+      // Sparks
+      for (let c=0;c<this.width;c++) {
         const baseX = (c+0.5)*cellW;
-        const baseY = (r+0.5)*cellH;
-        for (let i=0;i<FX.tetris.particlesPerCell;i++) {
-          const ang = -Math.PI/2 + (Math.random()-0.5)*Math.PI*0.9;
-          const spd = 140 + Math.random()*200;
-          this.particles.push({
-            x: baseX,
-            y: baseY,
-            vx: Math.cos(ang)*spd*0.4,
-            vy: Math.sin(ang)*spd,
-            life:0, ttl: 520 + Math.random()*220,
-            color: i%3===0? '#dbeafe' : (i%3===1? '#93c5fd' : '#ffffff'),
-            size: 1.4 + Math.random()*2.2
-          });
+        for (let s=0;s<4;s++) {
+          const ang = (-Math.PI/2) + (Math.random()-0.5)*Math.PI*0.5;
+          const spd = 120 + Math.random()*140;
+            this.particles.push({
+              x: baseX,
+              y: rowYMid,
+              vx: Math.cos(ang)*spd*0.35,
+              vy: Math.sin(ang)*spd,
+              life:0, ttl: 300 + Math.random()*200,
+              color: s%2===0? '#e0f7ff' : '#8bd3ff',
+              size: 1 + Math.random()*2
+            });
         }
       }
     });
@@ -636,6 +638,17 @@ export class TetrisGame {
     }
   }
 
+  private updateRowPuffs(delta:number) {
+    if (!this.rowPuffs.length) return;
+    for (let i=this.rowPuffs.length-1;i>=0;i--) {
+      const p = this.rowPuffs[i];
+      p.life += delta;
+      if (p.life > p.ttl) { this.rowPuffs.splice(i,1); continue; }
+      const t = p.life / p.ttl;
+      p.r = p.maxR * (0.15 + 0.85 * t);
+    }
+  }
+
   private collides(piece: ActivePiece, x: number, y: number): boolean {
     const { shape } = piece;
     for (let r = 0; r < shape.length; r++) {
@@ -665,7 +678,18 @@ export class TetrisGame {
     this.updateParticles(delta);
     this.updateLightning(delta);
     this.updateShockwaves(delta);
+    this.updateRowPuffs(delta);
     if (this.shakeTime > 0) this.shakeTime = Math.max(0, this.shakeTime - delta);
+    // Compute fall interpolation progress (0..1) if current piece can still move
+    if (this.current && this.dropInterval > 0) {
+      if (!this.collides(this.current, this.current.x, this.current.y + 1)) {
+        this.fallProgress = Math.min(1, this.dropAccumulator / this.dropInterval);
+      } else {
+        this.fallProgress = 0; // don't interpolate if blocked
+      }
+    } else {
+      this.fallProgress = 0;
+    }
     this.draw();
     requestAnimationFrame(this.loop);
   };
@@ -699,7 +723,8 @@ export class TetrisGame {
         for (let c=0; c<shape[r].length; c++) {
           if (shape[r][c]) {
             const px = (x + c) * cw;
-            const py = (y + r) * ch;
+            // Smooth interpolation: only apply to base y (not per block) so rows stay aligned
+            const py = (y + r + this.fallProgress) * ch;
             drawCell(this.ctx, px, py, cw, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
           }
         }
@@ -797,6 +822,7 @@ export class TetrisGame {
     this.ctx.restore();
   // moved above (camera shake block)
     this.drawShockwaves();
+    this.drawRowPuffs();
     if (this.flashUntil && performance.now() < this.flashUntil) {
       const remain = (this.flashUntil - performance.now())/220;
       this.ctx.fillStyle = `rgba(255,255,255,${0.55*remain})`;
@@ -823,5 +849,25 @@ export class TetrisGame {
       this.ctx.fill();
     }
     this.ctx.globalCompositeOperation = prev;
+  }
+
+  private drawRowPuffs() {
+    if (!this.rowPuffs.length) return;
+    const ctx = this.ctx;
+    const prev = ctx.globalCompositeOperation;
+    ctx.globalCompositeOperation = 'screen';
+    for (const p of this.rowPuffs) {
+      const t = p.life / p.ttl;
+      const alpha = 0.5 * (1 - t);
+      const g = ctx.createRadialGradient(p.x, p.y, p.r*0.15, p.x, p.y, p.r);
+      g.addColorStop(0, `rgba(224,246,255,${alpha})`);
+      g.addColorStop(0.45, `rgba(140,200,255,${alpha*0.55})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.beginPath();
+      ctx.fillStyle = g;
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = prev;
   }
 }
