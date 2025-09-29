@@ -159,6 +159,61 @@
       .stat::before, .stat::after { display:none; }
     }
     /* --- END STEP 2 --- */
+    /* --- STEP 3: ICONOGRAPHY (metal star badge, metallic lightning, tetromino block icon) --- */
+    /* High score star -> metallic + electric glow */
+    .high-badge .icon {
+      position:relative; display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; font-size:14px; font-weight:700;
+      background:linear-gradient(145deg,#f7fbff 0%,#c2d4e1 28%,#6d8698 55%,#2a3946 75%,#0d141a 100%);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow:
+        0 0 2px rgba(255,255,255,0.9),
+        0 0 4px rgba(102,209,255,0.8),
+        0 0 10px rgba(102,209,255,0.45),
+        0 0 18px rgba(102,209,255,0.25);
+      filter:drop-shadow(0 0 3px rgba(102,209,255,0.6));
+    }
+    .high-badge .icon::after { /* soft cyan aura */
+      content:""; position:absolute; inset:-2px; pointer-events:none; border-radius:50%;
+      background:radial-gradient(circle at 50% 55%, rgba(102,209,255,0.85), rgba(102,209,255,0) 65%);
+      mix-blend-mode:screen; opacity:.9; filter:blur(2px);
+    }
+    /* Lightning (level) icon -> metallic core + glow */
+    .level-card .stat-label:before {
+      content:"⚡"; margin-right:4px; font-size:11px; line-height:1; display:inline-block; transform:translateY(-1px);
+      background:linear-gradient(135deg,#fff2c2 0%,#f2d070 30%,#b88723 58%,#50370a 90%);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow:
+        0 0 2px rgba(255,230,140,0.85),
+        0 0 6px rgba(255,210,90,0.65),
+        0 0 12px rgba(255,200,70,0.35),
+        0 0 20px rgba(255,180,50,0.25);
+      filter:drop-shadow(0 0 4px rgba(255,200,90,0.55));
+    }
+    /* Lines icon -> mini glowing tetromino cell */
+    .lines-card .stat-label:before {
+      content:""; width:10px; height:10px; margin-right:4px; display:inline-block; border-radius:2px; position:relative; top:1px;
+      background:
+        linear-gradient(145deg, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0.05) 45%, rgba(0,0,0,0.15) 100%),
+        linear-gradient(145deg,#66d1ff 0%,#4f89ff 60%,#1b2f45 100%);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.55),
+        inset 0 0 6px rgba(255,255,255,0.35),
+        0 0 4px -1px rgba(102,209,255,0.8),
+        0 0 10px -2px rgba(102,209,255,0.55);
+    }
+    .lines-card .stat-label:before::after { /* inner seam glow */
+      content:""; position:absolute; inset:2px; border-radius:1px; pointer-events:none;
+      background:radial-gradient(circle at 35% 30%, rgba(255,255,255,0.7), rgba(255,255,255,0) 65%);
+      mix-blend-mode:screen; opacity:.9;
+    }
+    /* Adjust spacing so icons remain aligned after size tweaks */
+    .stat-label { display:flex; align-items:center; }
+    /* High contrast mode: revert decorative gradients */
+    @media (forced-colors: active) {
+      .high-badge .icon, .level-card .stat-label:before { background:none; color:ButtonText; filter:none; text-shadow:none; }
+      .lines-card .stat-label:before { background:ButtonText; box-shadow:none; }
+    }
+    /* --- END STEP 3 --- */
     .stat.emphasis.pulse { animation:statPulse 0.65s ease; }
     @keyframes statPulse { 0%{ transform:scale(1); } 35%{ transform:scale(1.035); } 70%{ transform:scale(0.992); } 100%{ transform:scale(1); } }
   /* Score pop animation */
