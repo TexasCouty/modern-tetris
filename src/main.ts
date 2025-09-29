@@ -68,10 +68,11 @@ function boot() {
         const into = lines % 10;
         progressBar.style.width = ((into/10)*100).toFixed(1)+'%';
       }
-      if (score > lastScore && scoreCard) {
+      const gained = score - lastScore;
+      // Only animate score on meaningful events: line clears (lines increased) or sizeable gain (>=50)
+      if (scoreCard && (lines > lastLines || gained >= 50)) {
         scoreCard.classList.remove('score-pop');
-        // Force reflow to restart animation
-        void (scoreCard as HTMLElement).offsetWidth;
+        void (scoreCard as HTMLElement).offsetWidth; // restart animation
         scoreCard.classList.add('score-pop');
       }
       if (lines > lastLines && linesCard) {
