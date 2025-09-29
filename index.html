@@ -359,6 +359,20 @@
       .score-primary.panel-light::after { background:none; }
     }
     /* --- END STEP 4 --- */
+    /* CAP High Score Badge Overlay */
+    .cap-high-score-badge { position:fixed; top:18px; left:50%; transform:translateX(-50%) translateY(-20px); opacity:0; z-index:90; pointer-events:none; transition:opacity .55s ease, transform .55s ease; }
+    .cap-high-score-badge.visible { opacity:1; transform:translateX(-50%) translateY(0); }
+    .cap-high-score-badge .cap-hs-inner { display:flex; align-items:center; gap:14px; padding:12px 20px 14px; border-radius:14px; background:linear-gradient(155deg, rgba(20,28,38,0.92), rgba(12,18,26,0.85)); box-shadow:0 8px 28px -10px rgba(0,0,0,0.85),0 0 0 1px rgba(120,156,255,0.25),0 0 14px -4px rgba(120,156,255,0.65); position:relative; overflow:hidden; }
+    .cap-high-score-badge .cap-hs-inner:before { content:""; position:absolute; inset:0; background:
+        radial-gradient(circle at 25% 35%, rgba(120,156,255,0.25), rgba(120,156,255,0) 60%),
+        radial-gradient(circle at 80% 65%, rgba(120,156,255,0.18), rgba(120,156,255,0) 65%),
+        repeating-linear-gradient(115deg, rgba(120,156,255,0.10) 0 2px, rgba(120,156,255,0) 2px 7px);
+      mix-blend-mode:overlay; opacity:.9; }
+    .cap-high-score-badge img { width:54px; height:54px; object-fit:contain; filter:drop-shadow(0 0 8px rgba(102,209,255,0.6)); }
+    .cap-high-score-badge .cap-hs-text { font-family:'Oxanium',system-ui,-apple-system,'Segoe UI',Roboto,Inter,Arial,sans-serif; font-size:16px; font-weight:700; letter-spacing:1.1px; background:linear-gradient(to bottom,#9FB5D1,#2E3A4F 55%,#141923); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:0 0 6px rgba(102,209,255,0.75),0 0 14px rgba(102,209,255,0.45); }
+    @media (max-width:600px){ .cap-high-score-badge .cap-hs-inner { padding:10px 14px 12px; gap:10px; } .cap-high-score-badge img { width:46px; height:46px; } .cap-high-score-badge .cap-hs-text { font-size:14px; letter-spacing:.9px; } }
+    @media (prefers-reduced-motion: reduce){ .cap-high-score-badge { transition:opacity .35s ease; transform:translateX(-50%) translateY(0)!important; } }
+    @media (forced-colors: active){ .cap-high-score-badge .cap-hs-text { background:none; color:ButtonText; text-shadow:none; } .cap-high-score-badge .cap-hs-inner { box-shadow:0 0 0 1px ButtonText; } }
   </style>
 </head>
 <body>
