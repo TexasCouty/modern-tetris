@@ -45,6 +45,11 @@ function boot() {
   let gameOverFlag = false;
 
   const nf = new Intl.NumberFormat('en-US');
+  let lastScore = 0;
+  let lastLines = 0;
+  const scoreCard = document.getElementById('score');
+  const linesCard = document.getElementById('lines');
+
   const game = new TetrisGame({
     width: 10,
     height: 20,
@@ -63,6 +68,19 @@ function boot() {
         const into = lines % 10;
         progressBar.style.width = ((into/10)*100).toFixed(1)+'%';
       }
+      if (score > lastScore && scoreCard) {
+        scoreCard.classList.remove('score-pop');
+        // Force reflow to restart animation
+        void (scoreCard as HTMLElement).offsetWidth;
+        scoreCard.classList.add('score-pop');
+      }
+      if (lines > lastLines && linesCard) {
+        linesCard.classList.remove('lines-flash');
+        void (linesCard as HTMLElement).offsetWidth;
+        linesCard.classList.add('lines-flash');
+      }
+      lastScore = score;
+      lastLines = lines;
     },
     onGameOver: () => {
       startBtn.textContent = 'Game Over - Restart (Space)';
@@ -87,8 +105,9 @@ function boot() {
 
   function togglePauseUi() {
     if (!gameRunning()) {
-  _overlay.classList.remove('visible');
-  _startBtn.textContent = 'Pause';
+      _overlay.classList.remove('visible');
+      _startBtn.textContent = 'Pause';
+      _startBtn.classList.add('running');
       if (location.search.includes('debug=1')) console.debug('[tetris] starting / resuming game');
       game.start();
       gameOverFlag = false;
@@ -103,13 +122,15 @@ function boot() {
       _overlay.textContent = 'PAUSED';
       _overlay.classList.add('visible');
     }
+    if (!gameRunning()) _startBtn.classList.remove('running');
   }
 
   function restartGame() {
     game.reset(true); // full restart & auto-start
     _overlay.classList.remove('visible');
     _overlay.textContent = '';
-    _startBtn.textContent = 'Pause';
+  _startBtn.textContent = 'Pause';
+  _startBtn.classList.add('running');
     gameOverFlag = false;
   }
 
@@ -122,7 +143,8 @@ function boot() {
     if (progressBar) progressBar.style.width = '0%';
     _overlay.textContent = 'READY';
     _overlay.classList.add('visible');
-    _startBtn.textContent = 'Start';
+  _startBtn.textContent = 'Start';
+  _startBtn.classList.remove('running');
     gameOverFlag = false;
   }
 
