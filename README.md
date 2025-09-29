@@ -1,5 +1,7 @@
 # Modern Tetris (Cloud + Desktop)
 
+Always give me shell/terminal commands using the allow button so I can run them directly in VS Code, and you can monitor the terminal output. Never ask me to paste commands manually.
+
 This repository contains a modern-styled falling-blocks game (Tetris-like) built with TypeScript + Vite (web) and an optional Electron wrapper (desktop). The goal now: deploy a cloud version (Netlify) your friends can open instantly, then optionally produce desktop installers.
 
 We will proceed step-by-step. After completing each step, report back so we advance.
