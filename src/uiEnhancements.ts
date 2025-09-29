@@ -38,15 +38,7 @@
     }
     lastScore = score;
   });
-  const observer = new MutationObserver(()=>{
-    const currentLines = parseInt(linesEl?.textContent||'0',10);
-    const into = currentLines % 10;
-    if (levelProgress) levelProgress.style.width = ((into/10)*100).toFixed(1)+'%';
-    if (scoreEl) { const raw = scoreEl.textContent||'0'; const num = Number(raw.replace(/[,]/g,'')); scoreEl.textContent = nf.format(num); }
-    if (highVal) { const raw = highVal.textContent||'0'; const num = Number(raw.replace(/[,]/g,'')); highVal.textContent = nf.format(num); }
-  });
-  const statsRoot = document.querySelector('.stats');
-  if (statsRoot) observer.observe(statsRoot, { subtree:true, characterData:true, childList:true });
+  // Removed MutationObserver loop; main.ts now updates progress + formatting directly.
 })();
 
 (() => {

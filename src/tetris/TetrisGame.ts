@@ -272,6 +272,7 @@ export class TetrisGame {
   private softDropRepeatAccum = 0;
   private rng: () => number;
   private headless = false;
+  private simpleMode = false; // disables beveled draw for debug
   // single style palette
 
   constructor(private options: TetrisGameOptions) {
@@ -322,6 +323,7 @@ export class TetrisGame {
     this.bindInput();
     this.refillQueue();
     this.loadHigh();
+    try { this.simpleMode = location.search.includes('simple=1'); } catch {}
   }
 
   private bindInput() {
@@ -740,7 +742,12 @@ export class TetrisGame {
       for (let c=0; c<this.width; c++) {
         const cellVal = this.board[r][c];
         if (cellVal) {
-          drawCell(this.ctx, c*cw, r*ch, cw, PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
+          if (this.simpleMode) {
+            this.ctx.fillStyle = PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'].base;
+            this.ctx.fillRect(c*cw, r*ch, cw, ch);
+          } else {
+            drawCell(this.ctx, c*cw, r*ch, cw, PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
+          }
         } else {
           this.ctx.fillStyle = (r+c)%2===0 ? '#050505' : '#0a0a0a';
           this.ctx.fillRect(c*cw, r*ch, cw, ch);
@@ -754,7 +761,12 @@ export class TetrisGame {
           if (shape[r][c]) {
             const px = (x + c) * cw;
             const py = (y + r + this.fallProgress) * ch;
-            drawCell(this.ctx, px, py, cw, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
+            if (this.simpleMode) {
+              this.ctx.fillStyle = PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'].base;
+              this.ctx.fillRect(px, py, cw, ch);
+            } else {
+              drawCell(this.ctx, px, py, cw, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
+            }
           }
         }
       }
@@ -833,25 +845,21 @@ export class TetrisGame {
 
   private draw() {
     if (this.headless) return; // skip all rendering work in headless mode
-    this.drawBoard();
-    this.drawParticles();
-    this.drawLightningArcs();
-    // Apply camera shake before drawing board & effects
     this.ctx.save();
+    // Apply camera shake transform once
     if (this.shakeTime > 0) {
       const intensity = (this.shakeTime/300);
       const dx = (Math.random()*2 -1) * this.shakeMag * intensity;
       const dy = (Math.random()*2 -1) * this.shakeMag * intensity;
       this.ctx.translate(dx, dy);
     }
+    // Single pass draw order
     this.drawBoard();
     this.drawParticles();
     this.drawLightningArcs();
     this.drawShockwaves();
-    this.ctx.restore();
-  // moved above (camera shake block)
-    this.drawShockwaves();
     this.drawRowPuffs();
+    this.ctx.restore();
     if (this.flashUntil && performance.now() < this.flashUntil) {
       const remain = (this.flashUntil - performance.now())/220;
       this.ctx.fillStyle = `rgba(255,255,255,${0.55*remain})`;

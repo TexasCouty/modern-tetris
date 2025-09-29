@@ -1,6 +1,10 @@
 import { TetrisGame } from './tetris/TetrisGame';
 import './uiEnhancements'; // ensure UI side-effects are bundled
 
+if (location.search.includes('debug=1')) {
+  console.debug('[tetris] main.ts module loaded');
+}
+
 // Provide optional logo override early (safe before DOM ready)
 try {
   // @ts-ignore
@@ -12,9 +16,10 @@ try {
 
 let initialized = false;
 
-window.addEventListener('DOMContentLoaded', () => {
-  if (initialized) return; // guard against double fire (e.g. module HMR in dev)
+function boot() {
+  if (initialized) return;
   initialized = true;
+  if (location.search.includes('debug=1')) console.debug('[tetris] boot() running; readyState=', document.readyState);
 
   const canvas = document.getElementById('game') as HTMLCanvasElement | null;
   const scoreEl = document.getElementById('scoreVal');
@@ -29,6 +34,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('startBtn') as HTMLButtonElement | null;
   const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement | null;
   const overlay = document.getElementById('overlay') as HTMLDivElement | null;
+  const progressBar = document.getElementById('levelProgress') as HTMLDivElement | null;
 
   if (!canvas || !scoreEl || !levelEl || !linesEl || !highEl || !startBtn || !overlay) {
     console.error('[tetris] Critical DOM elements missing; aborting init');
@@ -38,24 +44,38 @@ window.addEventListener('DOMContentLoaded', () => {
   const nextCanvas = undefined as any; // preview disabled
   let gameOverFlag = false;
 
+  const nf = new Intl.NumberFormat('en-US');
   const game = new TetrisGame({
     width: 10,
     height: 20,
     canvas,
     nextCanvas,
     onStats: ({ score, level, lines }) => {
-      scoreEl.textContent = String(score);
-      levelEl.textContent = String(level);
-      linesEl.textContent = String(lines);
-      highEl.textContent = String(game.getHighScore());
+      // Debug stats logging (only if query contains debug)
+      if (location.search.includes('debug=1')) {
+        console.debug('[tetris][stats]', { score, level, lines });
+      }
+      scoreEl.textContent = nf.format(score);
+      levelEl.textContent = nf.format(level);
+      linesEl.textContent = nf.format(lines);
+      highEl.textContent = nf.format(game.getHighScore());
+      if (progressBar) {
+        const into = lines % 10;
+        progressBar.style.width = ((into/10)*100).toFixed(1)+'%';
+      }
     },
     onGameOver: () => {
       startBtn.textContent = 'Game Over - Restart (Space)';
       overlay.textContent = 'GAME OVER';
       overlay.classList.add('visible');
       gameOverFlag = true;
+      if (location.search.includes('debug=1')) console.debug('[tetris] game over');
     }
   });
+
+  // Expose for console-driven debugging
+  (window as any).__GAME__ = game;
+  if (location.search.includes('debug=1')) console.debug('[tetris] game instance created');
 
   startBtn.textContent = 'Start';
 
@@ -69,11 +89,14 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!gameRunning()) {
   _overlay.classList.remove('visible');
   _startBtn.textContent = 'Pause';
+      if (location.search.includes('debug=1')) console.debug('[tetris] starting / resuming game');
       game.start();
       gameOverFlag = false;
+      if (location.search.includes('debug=1')) console.debug('[tetris] game.start() invoked, current piece?', game._debugHasCurrent?.());
       return;
     }
     game.togglePause();
+    if (location.search.includes('debug=1')) console.debug('[tetris] toggling pause, now running?', gameRunning());
     if (_overlay.classList.contains('visible')) {
       _overlay.classList.remove('visible');
     } else {
@@ -91,6 +114,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   startBtn.addEventListener('click', () => { if (gameOverFlag) restartGame(); else togglePauseUi(); });
+  if (location.search.includes('debug=1')) console.debug('[tetris] start button listener attached');
   resetBtn?.addEventListener('click', () => { restartGame(); });
   btnUp?.addEventListener('click', () => game.rotateCW());
   btnLeft?.addEventListener('click', () => game.moveLeft());
@@ -112,6 +136,16 @@ window.addEventListener('DOMContentLoaded', () => {
   window.addEventListener('tetris-btn-down', ()=> game.dropSoft());
 
   // Not auto-starting: waits for user interaction.
-});
+}
+
+// Fallback: if document already loaded, run immediately; else wait for DOMContentLoaded
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+
+// Watchdog: warn if not initialized within 2s
+setTimeout(() => { if (!initialized) console.error('[tetris] initialization watchdog: boot() never ran'); }, 2000);
 
 // Removed scaling logic to prevent clipping; Electron window resized instead.

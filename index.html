@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Modern Tetris</title>
-  <script type="module" src="/src/uiEnhancements.ts"></script>
+  <!-- uiEnhancements is imported inside main.ts; removed duplicate script include to prevent double MutationObservers & event handlers -->
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
