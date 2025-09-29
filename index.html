@@ -1,10 +1,55 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Modern Tetris</title>
   <script type="module" src="/src/uiEnhancements.ts"></script>
-  @media (max-width: 380px) { canvas { width:240px; height:480px; } }
-  /* Prevent accidental scroll / bounce when interacting */
-  canvas, .control-grid, button { touch-action:none; -webkit-touch-callout:none; }
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { height:100%; }
+    body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; background: radial-gradient(circle at 30% 20%, #1f2535 0%, #0d1016 70%); color:#e5e7eb; -webkit-font-smoothing: antialiased; }
+    #stage { padding:16px; }
+    .app-shell { display:flex; gap:28px; align-items:flex-start; justify-content:center; max-width:980px; margin:0 auto; }
+    @media (max-width: 760px){ .app-shell { flex-direction:column; align-items:stretch; gap:20px; } #stage{ padding:12px 10px 40px; } }
+    canvas { background:#06080d; display:block; image-rendering:pixelated; box-shadow:0 0 0 1px rgba(255,255,255,0.06),0 4px 16px -4px rgba(0,0,0,0.8); border-radius:6px; }
+    @media (max-width: 380px) { canvas { width:240px; height:480px; } }
+    /* Prevent accidental scroll / bounce when interacting */
+    canvas, .control-grid, button { touch-action:none; -webkit-touch-callout:none; }
+    #gameWrap { position:relative; }
+    #overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:54px; font-weight:700; letter-spacing:2px; font-family:inherit; background:rgba(0,0,0,0.55); backdrop-filter: blur(2px); color:#fff; opacity:0; transition:opacity .25s; pointer-events:none; border-radius:6px; }
+    #overlay.visible { opacity:1; }
+    .panel { width:280px; max-width:100%; }
+    .logo-wrap { text-align:center; margin:0 0 10px; }
+    .logo-wrap img { max-width:100%; height:54px; display:block; margin:0 auto; object-fit:contain; }
+    .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+    .pro-grid .stat.emphasis { grid-column: span 2; }
+    .stat { background:linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); padding:10px 12px 12px; border-radius:10px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 2px 6px -2px rgba(0,0,0,0.7); }
+    .stat-label { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:#9ca3af; font-weight:600; }
+    .stat-val { display:block; font-size:20px; font-weight:600; margin-top:2px; font-variant-numeric: tabular-nums; }
+    .stat.big .stat-val.big { font-size:34px; line-height:1.05; font-weight:700; }
+    .stat.emphasis { background:linear-gradient(155deg, rgba(120,156,255,0.18), rgba(120,156,255,0.06)); box-shadow:0 4px 14px -6px rgba(48,84,255,0.6), inset 0 0 0 1px rgba(255,255,255,0.08); }
+    .stat.emphasis.pulse { animation:statPulse 0.65s ease; }
+    @keyframes statPulse { 0%{ transform:scale(1); } 35%{ transform:scale(1.035); } 70%{ transform:scale(0.992); } 100%{ transform:scale(1); } }
+    .progress-wrap { height:5px; margin-top:8px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden; position:relative; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4); }
+    .progress-bar { position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg,#4f7ff9,#8b5cf6); box-shadow:0 0 0 1px rgba(255,255,255,0.1),0 0 12px -2px #4f7ff9; transition:width .25s cubic-bezier(.4,.0,.2,1); }
+    .delta { font-size:12px; font-weight:600; color:#10b981; opacity:0; transform:translateY(4px); transition: all .3s; }
+    .delta.visible { opacity:1; transform:translateY(0); }
+    .toast-layer { position:relative; min-height:40px; }
+    .toast-layer .toast { position:absolute; right:0; top:0; background:rgba(17,24,39,0.9); padding:8px 14px 9px; border-radius:8px; font-size:13px; font-weight:600; letter-spacing:.5px; animation:toastIn .35s ease; box-shadow:0 4px 14px -6px rgba(0,0,0,0.9),0 0 0 1px rgba(255,255,255,0.06); backdrop-filter: blur(4px); }
+    .toast.good { background:linear-gradient(135deg, rgba(34,197,94,0.85), rgba(34,197,94,0.65)); color:#022c16; }
+    .toast.out { animation:toastOut .42s ease forwards; }
+    @keyframes toastIn { 0%{ opacity:0; transform:translateY(-8px) scale(.95);} 100%{ opacity:1; transform:translateY(0) scale(1);} }
+    @keyframes toastOut { 0%{ opacity:1; transform:translateY(0) scale(1);} 100%{ opacity:0; transform:translateY(-8px) scale(.93);} }
+    .divider { height:1px; background:linear-gradient(90deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02)); }
+    button { cursor:pointer; outline:none; background:linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.03)); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:10px; font-size:15px; padding:10px 14px; font-weight:600; letter-spacing:.5px; font-family:inherit; transition:background .2s, transform .15s, border-color .25s; position:relative; }
+    button:hover { background:linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.05)); }
+    button:active { transform:translateY(2px); }
+    .control-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px; }
+    .control-grid button { height:50px; font-size:22px; font-weight:600; }
+    .foot { font-size:12px; opacity:0.65; line-height:1.4; }
+    @media (max-width: 520px){ .panel { width:100%; } .app-shell { gap:16px; } .control-grid button { height:54px; } #gameWrap { margin:0 auto; } }
   </style>
 </head>
 <body>
@@ -42,161 +87,6 @@
       </div>
     </div>
   </div>
-  <script>
-    // Professional scoreboard enhancements
-    (function(){
-      const nf = new Intl.NumberFormat('en-US');
-      const scoreEl = document.getElementById('scoreVal');
-      const levelEl = document.getElementById('levelVal');
-      const linesEl = document.getElementById('linesVal');
-      const highVal = document.getElementById('highVal');
-      const scoreStat = document.getElementById('score');
-      const levelProgress = document.getElementById('levelProgress');
-      const scoreDelta = document.getElementById('scoreDelta');
-      const toastLayer = document.getElementById('toastLayer');
-      let lastScore = 0;
-      function showToast(text, opts={}) {
-        if(!toastLayer) return; const div = document.createElement('div');
-        div.className = 'toast ' + (opts.type||''); div.textContent = text;
-        toastLayer.appendChild(div);
-        setTimeout(()=> div.classList.add('out'), opts.ttl || 1600);
-        setTimeout(()=> div.remove(), (opts.ttl||1600)+480);
-      }
-      window.addEventListener('tetris-level-up', e => {
-        const { level } = e.detail;
-        showToast('LEVEL '+ level, { type:'good', ttl: 1700 });
-        scoreStat?.classList.add('pulse');
-        setTimeout(()=> scoreStat?.classList.remove('pulse'), 620);
-      });
-      window.addEventListener('tetris-line-clear', e => {
-        const { cleared, score } = e.detail;
-        if (cleared === 4) { showToast('TETRIS +' + nf.format(score - lastScore), { type:'good', ttl:1900 }); }
-        else if (cleared === 3) { showToast('TRIPLE', { type:'good', ttl:1400 }); }
-        else if (cleared === 2) { showToast('DOUBLE', { ttl:1200 }); }
-        else if (cleared === 1) { showToast('LINE', { ttl:1000 }); }
-        if (scoreDelta && score > lastScore) {
-          scoreDelta.textContent = '+' + nf.format(score - lastScore);
-          scoreDelta.classList.add('visible');
-          setTimeout(()=> scoreDelta.classList.remove('visible'), 1200);
-        }
-        lastScore = score;
-      });
-      const observer = new MutationObserver(()=>{
-        const currentLines = parseInt(linesEl?.textContent||'0',10);
-        const into = currentLines % 10;
-        if (levelProgress) levelProgress.style.width = ((into/10)*100).toFixed(1)+'%';
-        // Format numbers once they change (idempotent)
-        if (scoreEl) { const raw = scoreEl.textContent||'0'; const num = Number(raw.replace(/[,]/g,'')); scoreEl.textContent = nf.format(num); }
-        if (highVal) { const raw = highVal.textContent||'0'; const num = Number(raw.replace(/[,]/g,'')); highVal.textContent = nf.format(num); }
-      });
-      const statsRoot = document.querySelector('.stats');
-      if (statsRoot) observer.observe(statsRoot, { subtree:true, characterData:true, childList:true });
-    })();
-  </script>
-  <script>
-    // Runtime remote logo injection (no local file). Priority:
-    // 1. ?logo= URL param
-    // 2. window.__TETRIS_LOGO_URL__ (can be injected by preload or env define)
-    // 3. Fallback SVG wordmark (inline)
-    (function(){
-      const params = new URLSearchParams(location.search);
-      const paramLogo = params.get('logo');
-  const globalLogo = (window && window.__TETRIS_LOGO_URL__) || undefined;
-  // Removed XML declaration to prevent parse5 HTML build error on Netlify ("unexpected-question-mark-instead-of-tag-name")
-  const fallbackSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="54" viewBox="0 0 220 54"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#4f7ff9"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><rect width="220" height="54" rx="10" fill="rgba(255,255,255,0.04)"/><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI,Inter,Arial,sans-serif" font-size="30" font-weight="600" fill="url(#g)">TETRIS</text></svg>');
-      const el = document.getElementById('gameLogo');
-      if(!el) return;
-      // New implicit fallback to /logo.png so you can just drop a file at public/logo.png
-      // Order: query param > injected global > /logo.png > inline SVG
-      const candidate = paramLogo || globalLogo || '/logo.png';
-      el.src = candidate;
-      el.addEventListener('error', () => { el.src = fallbackSvg; });
-      // After the logo loads, if it's a raster image with a bright (white) outline, replace those outline pixels
-      // with a darker tone derived from the interior average color for a flatter modern look.
-      el.addEventListener('load', () => {
-        if(el.dataset.processed) return; // avoid double work
-        // Skip SVG data URIs (already vector without white stroke)
-        if(/^data:image\/svg/.test(el.src)) return;
-        try {
-          const canvas = document.createElement('canvas');
-          const w = canvas.width = el.naturalWidth || el.width;
-          const h = canvas.height = el.naturalHeight || el.height;
-          if(!w || !h) return; // nothing to do
-          const ctx = canvas.getContext('2d', { willReadFrequently:true });
-          ctx.drawImage(el, 0, 0);
-          let imgData;
-          try { imgData = ctx.getImageData(0,0,w,h); } catch(e){ return; } // likely cross-origin taint
-          const d = imgData.data;
-          let sumR=0,sumG=0,sumB=0,count=0;
-          // First pass: gather average of non-white, non-transparent interior pixels
-          for(let i=0;i<d.length;i+=4){
-            const a = d[i+3]; if(a < 180) continue; // ignore near transparent
-            const r=d[i],g=d[i+1],b=d[i+2];
-            if(r>215 && g>215 && b>215) continue; // skip near-white (potential outline)
-            sumR+=r; sumG+=g; sumB+=b; count++;
-          }
-            if(!count) return; // can't derive palette
-          const avgR=sumR/count, avgG=sumG/count, avgB=sumB/count;
-          // Create a darker stroke color ~35% brightness of average (but keep some saturation)
-          const darken = c => Math.max(0, Math.min(255, Math.round(c*0.38)));
-          const strokeR = darken(avgR);
-          const strokeG = darken(avgG);
-          const strokeB = darken(avgB);
-          // Second pass: remap near-white pixels to stroke color while preserving alpha
-          for(let i=0;i<d.length;i+=4){
-            const a = d[i+3]; if(a < 50) continue; // skip mostly transparent
-            const r=d[i],g=d[i+1],b=d[i+2];
-            if(r>215 && g>215 && b>215){
-              d[i] = strokeR;
-              d[i+1] = strokeG;
-              d[i+2] = strokeB;
-            }
-          }
-          ctx.putImageData(imgData,0,0);
-          el.src = canvas.toDataURL('image/png');
-          el.dataset.processed = 'true';
-        } catch(err){ /* silent fallback */ }
-      });
-    })();
-  </script>
   <script type="module" src="/src/main.ts"></script>
-  <script>
-    // Basic mobile button press repeat for left/right (minimal, does not affect desktop)
-    (function(){
-      const btnL = document.getElementById('btnLeft');
-      const btnR = document.getElementById('btnRight');
-      const btnD = document.getElementById('btnDown');
-      if(!btnL||!btnR||!btnD) return;
-      function repeater(el, fire){
-        let t, hold=false;
-        const start = (e)=>{ e.preventDefault(); fire(); hold=true; let delay=260; const loop=()=>{ if(!hold) return; fire(); delay = Math.max(55, delay*0.75); t=setTimeout(loop, delay); }; t=setTimeout(loop, delay); };
-        const end=()=>{ hold=false; if(t) clearTimeout(t); };
-        el.addEventListener('pointerdown', start, {passive:false});
-        window.addEventListener('pointerup', end);
-        window.addEventListener('pointercancel', end);
-      }
-      // Expose simple commands through custom events to main.ts (decoupled)
-      repeater(btnL, ()=>window.dispatchEvent(new CustomEvent('tetris-btn-left')));
-      repeater(btnR, ()=>window.dispatchEvent(new CustomEvent('tetris-btn-right')));
-      repeater(btnD, ()=>window.dispatchEvent(new CustomEvent('tetris-btn-down')));
-    })();
-  </script>
-  <script>
-    // Equalize heights: match game card height to .panel (right side) once images/fonts load
-    function syncHeights(){
-      const panel = document.querySelector('.panel');
-      const wrap = document.getElementById('gameWrap');
-      if(!panel || !wrap) return;
-      // Disable forced equal height on narrow/mobile layout so page can scroll naturally.
-      if(window.innerWidth <= 520){
-        wrap.style.height = '';
-        return;
-      }
-      const h = panel.getBoundingClientRect().height;
-      wrap.style.height = h + 'px';
-    }
-    window.addEventListener('load', () => { syncHeights(); setTimeout(syncHeights, 50); });
-    window.addEventListener('resize', syncHeights);
-  </script>
 </body>
 </html>
