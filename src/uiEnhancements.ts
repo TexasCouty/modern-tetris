@@ -10,19 +10,30 @@
   interface MBItem { text: string; tier: 'line'|'double'|'triple'|'tetris'|'level'; bonus?: number; ttl: number; }
   const queue: MBItem[] = [];
   let active: HTMLElement | null = null;
+  let activeTier: MBItem['tier'] | null = null;
   let showing = false;
   let lastScore = 0;
   function tierClass(t:MBItem['tier']){ return 'mb-'+t; }
+  function priority(t: MBItem['tier']): number {
+    switch(t){
+      case 'line': return 1;
+      case 'double': return 2;
+      case 'triple': return 3;
+      case 'tetris': return 4;
+      case 'level': return 5;
+    }
+  }
   function pushMessage(item: MBItem){
-    // Preempt logic: tetris & level override anything in queue (and current line/double/triple)
-    if(item.tier === 'tetris' || item.tier === 'level'){
-      if(active && !active.classList.contains('mb-tetris') && !active.classList.contains('mb-level')){
-        // force exit of current lower priority
-        active.classList.remove('enter'); active.classList.add('exit'); setTimeout(()=> active?.remove(), 160);
-        active = null; showing=false;
-      }
-      // Remove queued low-priority items
-      for(let i=queue.length-1;i>=0;i--){ if(queue[i].tier==='line'||queue[i].tier==='double'||queue[i].tier==='triple') queue.splice(i,1); }
+    // Preempt if incoming has higher priority than active
+    if(active && activeTier && priority(item.tier) > priority(activeTier)) {
+      active.classList.remove('enter'); active.classList.add('exit');
+      setTimeout(()=> active?.remove(), 150);
+      active = null; activeTier = null; showing = false;
+      // Remove any lower-priority messages still queued
+      for(let i=queue.length-1;i>=0;i--){ if(priority(queue[i].tier) < priority(item.tier)) queue.splice(i,1); }
+    } else if(item.tier === 'tetris' || item.tier === 'level') {
+      // Existing logic: nuke lower tiers in queue even if no active or active already high
+      for(let i=queue.length-1;i>=0;i--){ if(priority(queue[i].tier) < priority(item.tier)) queue.splice(i,1); }
     }
     queue.push(item); drain();
   }
@@ -31,11 +42,11 @@
     const el = document.createElement('div'); el.className = 'mb-msg '+ tierClass(next.tier) + ' enter';
     el.textContent = next.text;
     if(next.bonus){ const b = document.createElement('span'); b.className='mb-bonus'; b.textContent='+'+ nf.format(next.bonus); el.appendChild(b); }
-  board.appendChild(el); active = el; showing = true;
+  board.appendChild(el); active = el; activeTier = next.tier; showing = true;
     const ttl = next.ttl;
     setTimeout(()=>{
       if(!el.isConnected) return; el.classList.remove('enter'); el.classList.add('exit');
-      setTimeout(()=>{ if(el.isConnected) el.remove(); showing=false; drain(); }, 190);
+      setTimeout(()=>{ if(el.isConnected) el.remove(); showing=false; active=null; activeTier=null; drain(); }, 190);
     }, ttl);
   }
   window.addEventListener('tetris-level-up', (e: any) => {
