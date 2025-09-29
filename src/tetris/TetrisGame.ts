@@ -214,13 +214,6 @@ function hexToRgba(hex: string, a = 1) {
 const SCORE_TABLE = { 1: 100, 2: 300, 3: 500, 4: 800 };
 const TETRIS_BONUS = 400; // extra bonus for 4-line clear
 
-// Gravity tuning: faster acceleration per level (exponential decay) with lower minimum.
-// Level 1 ~1000ms, level 2 ~870ms, level 5 ~570ms, level 10 ~300ms, clamps at 60ms.
-const GRAVITY_MIN = 60;
-function gravityForLevel(level: number) {
-  return Math.max(GRAVITY_MIN, Math.round(1000 * Math.pow(0.87, level - 1)));
-}
-
 // FX tuning (reduced lightning intensity)
 const FX = {
   tetris: {
@@ -257,7 +250,7 @@ export class TetrisGame {
   private nextCtx?: CanvasRenderingContext2D;
   private current: ActivePiece | null = null;
   private nextQueue: string[] = [];
-  private dropInterval = gravityForLevel(1); // ms (dynamic based on level)
+  private dropInterval = 1000; // ms
   private dropAccumulator = 0;
   private lastTime = 0;
   private running = false;
@@ -370,7 +363,7 @@ export class TetrisGame {
   reset() {
     this.board.forEach(row => row.fill(null));
     this.stats = { score: 0, level: 1, lines: 0 };
-  this.dropInterval = gravityForLevel(1);
+    this.dropInterval = 1000;
     this.current = null;
     this.nextQueue = [];
     this.held = null;
@@ -555,7 +548,7 @@ export class TetrisGame {
       const newLevel = Math.floor(this.stats.lines / 10) + 1;
       if (newLevel !== this.stats.level) {
         this.stats.level = newLevel;
-  this.dropInterval = gravityForLevel(this.stats.level);
+        this.dropInterval = Math.max(100, 1000 - (this.stats.level -1)*75);
         // Level up event for UI animations
         try { window.dispatchEvent(new CustomEvent('tetris-level-up', { detail: { level: this.stats.level, lines: this.stats.lines, score: this.stats.score } })); } catch {}
       }
