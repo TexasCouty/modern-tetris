@@ -20,8 +20,9 @@ function boot() {
   if (initialized) return;
   initialized = true;
   if (location.search.includes('debug=1')) console.debug('[tetris] boot() running; readyState=', document.readyState);
-  // TEMP: Reset high score (requested). Remove or gate behind a query param when no longer needed.
-  try { localStorage.removeItem('tetris_high_score'); } catch {}
+  // High score reset logic (user requested)
+  const params = new URLSearchParams(location.search);
+  const forceResetHS = params.has('resetHS') || true; // 'true' keeps current behavior of always resetting; remove '|| true' later.
 
   const canvas = document.getElementById('game') as HTMLCanvasElement | null;
   const scoreEl = document.getElementById('scoreVal');
@@ -37,6 +38,11 @@ function boot() {
   const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement | null;
   const overlay = document.getElementById('overlay') as HTMLDivElement | null;
   const progressBar = document.getElementById('levelProgress') as HTMLDivElement | null;
+
+  // Perform reset after we have element references so UI reflects immediately.
+  if (forceResetHS) {
+    try { localStorage.removeItem('tetris_high_score'); if (highEl) highEl.textContent = '0'; } catch {}
+  }
 
   if (!canvas || !scoreEl || !levelEl || !linesEl || !highEl || !startBtn || !overlay) {
     console.error('[tetris] Critical DOM elements missing; aborting init');
