@@ -114,13 +114,49 @@ function boot() {
 
   function gameRunning(): boolean { return _startBtn.textContent === 'Pause'; }
 
+  let countingDown = false;
+
+  function runCountdownAndStart() {
+    if (countingDown) return; // prevent overlapping
+    countingDown = true;
+    _overlay.classList.remove('ready-pulse');
+    _overlay.classList.add('visible','counting');
+    const seq = ['3','2','1','GO'];
+    let idx = 0;
+    function step(){
+      const label = seq[idx];
+      _overlay.innerHTML = `<span class="count-num ${label==='GO'?'go':''}">${label}</span>`;
+      idx++;
+      if (idx < seq.length) {
+        setTimeout(step, 750);
+      } else {
+        // final delay, then start
+        setTimeout(()=>{
+          _overlay.classList.remove('visible','counting');
+          _overlay.innerHTML='';
+          _startBtn.textContent = 'Pause';
+          _startBtn.classList.add('running');
+          scoreCardEl?.classList.add('score-active');
+          game.start();
+          gameOverFlag = false;
+          countingDown = false;
+        }, 600);
+      }
+    }
+    step();
+  }
+
   function togglePauseUi() {
     if (!gameRunning()) {
-  _overlay.classList.remove('visible');
-  _overlay.classList.remove('ready-pulse');
+      // If overlay currently shows READY, run countdown first
+      if (_overlay.textContent === 'READY') {
+        runCountdownAndStart();
+        return;
+      }
+      _overlay.classList.remove('visible','ready-pulse');
       _startBtn.textContent = 'Pause';
       _startBtn.classList.add('running');
-  scoreCardEl?.classList.add('score-active');
+      scoreCardEl?.classList.add('score-active');
       if (location.search.includes('debug=1')) console.debug('[tetris] starting / resuming game');
       game.start();
       gameOverFlag = false;
