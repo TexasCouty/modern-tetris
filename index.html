@@ -57,9 +57,11 @@
   .btn-secondary:active { transform:translateY(2px); }
     button:hover { background:linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.05)); }
     button:active { transform:translateY(2px); }
-  .control-grid { display:grid; grid-template-columns:repeat(3,30px); grid-template-rows:repeat(3,30px); gap:4px; justify-content:center; margin:6px auto 0; width:max-content; }
-  .control-grid button { width:30px; height:30px; font-size:14px; font-weight:600; padding:0; display:flex; align-items:center; justify-content:center; }
+  .control-cluster { margin:6px auto 0; padding:6px 8px 8px; background:linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); border-radius:10px; box-shadow:0 2px 4px -2px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.04); }
+  .control-grid { display:grid; grid-template-columns:repeat(3,28px); grid-template-rows:repeat(3,28px); gap:2px; justify-content:center; width:max-content; }
+  .control-grid button { width:28px; height:28px; font-size:13px; font-weight:600; padding:0; display:flex; align-items:center; justify-content:center; }
   .control-grid .blank { pointer-events:none; opacity:0; }
+  .foot-bar { margin-top:6px; font-size:10px; opacity:0.75; text-align:center; background:linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); padding:4px 6px 5px; border-radius:6px; font-weight:500; letter-spacing:.4px; }
     .foot { font-size:12px; opacity:0.65; line-height:1.4; }
     @media (max-width: 520px){ .panel { width:100%; } .app-shell { gap:16px; } .control-grid { gap:6px; } .control-grid button { width:48px; height:48px; } #gameWrap { margin:0 auto; } }
   </style>
@@ -95,19 +97,19 @@
             <button id="resetBtn" class="btn-secondary" style="flex:0.9;">Reset</button>
           </div>
           <div class="divider" style="margin:6px 0 4px;"></div>
-          <div class="control-grid">
-            <div class="blank"></div>
-            <button id="btnUp">▲</button>
-            <div class="blank"></div>
-            <button id="btnLeft">◀</button>
-            <button id="btnDown">▼</button>
-            <button id="btnRight">▶</button>
-            <div class="blank"></div>
-            <button id="btnHard">⤓</button>
-            <div class="blank"></div>
-          </div>
-          <div class="foot" style="margin-top:6px; font-size:10px;">
-            Keyboard: Arrows / Space / Shift / R
+          <div class="control-cluster">
+            <div class="control-grid">
+              <div class="blank"></div>
+              <button id="btnUp" title="Rotate (Up Arrow)">▲</button>
+              <div class="blank"></div>
+              <button id="btnLeft" title="Move Left (Left Arrow)">◀</button>
+              <button id="btnDown" title="Soft Drop (Down Arrow)">▼</button>
+              <button id="btnRight" title="Move Right (Right Arrow)">▶</button>
+              <div class="blank"></div>
+              <button id="btnHard" title="Hard Drop (Shift)">⤓</button>
+              <div class="blank"></div>
+            </div>
+            <div class="foot-bar">Arrows Move / Up Rotate / Down Soft Drop / Shift Hard Drop / Space Pause</div>
           </div>
         </div>
       </div>
