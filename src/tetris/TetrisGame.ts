@@ -7,6 +7,10 @@ export interface TetrisGameOptions {
   nextCanvas?: HTMLCanvasElement; // optional (preview disabled if absent)
   onStats?: (stats: TetrisStats) => void;
   onGameOver?: () => void;
+  /** Optional RNG injection for deterministic tests */
+  rng?: () => number;
+  /** If true, skips real canvas context acquisition & rendering */
+  headless?: boolean;
 }
 
 // Tetromino definitions in their rotation states (0,90,180,270)
@@ -266,6 +270,8 @@ export class TetrisGame {
   private fallProgress = 0;
   private softDropHeld = false;
   private softDropRepeatAccum = 0;
+  private rng: () => number;
+  private headless = false;
   // single style palette
 
   constructor(private options: TetrisGameOptions) {
@@ -273,14 +279,44 @@ export class TetrisGame {
     this.height = options.height;
     this.board = Array.from({ length: this.height }, () => Array(this.width).fill(null));
     this.canvas = options.canvas;
-    const ctx = this.canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas 2D context not available');
-    this.ctx = ctx;
+    // Assign RNG immediately so refillQueue can use it
+    this.rng = options.rng ?? Math.random;
+    this.headless = !!options.headless;
+    if (this.headless) {
+      // Minimal no-op 2D context stub sufficient for method calls in draw()
+      const noop = () => {};
+      const grad: any = { addColorStop: noop };
+      const dummyCtx: Partial<CanvasRenderingContext2D> = {
+        fillRect: noop, clearRect: noop, beginPath: noop, moveTo: noop, lineTo: noop, closePath: noop,
+        stroke: noop, strokeRect: noop, fill: noop, arc: noop, save: noop, restore: noop,
+        translate: noop, createRadialGradient: () => grad, createLinearGradient: () => grad,
+        fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1,
+        getImageData: () => ({ data: new Uint8ClampedArray(this.canvas.width * this.canvas.height * 4) } as any)
+      };
+      this.ctx = dummyCtx as CanvasRenderingContext2D;
+    } else {
+      const ctx = this.canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context not available');
+      this.ctx = ctx;
+    }
     if (options.nextCanvas) {
       this.nextCanvas = options.nextCanvas;
-      const nctx = this.nextCanvas.getContext('2d');
-      if (!nctx) throw new Error('Next canvas 2D context not available');
-      this.nextCtx = nctx;
+      if (this.headless) {
+        // stub next context too
+        const noop = () => {};
+        const grad: any = { addColorStop: noop };
+        const dummyCtx: Partial<CanvasRenderingContext2D> = {
+          fillRect: noop, clearRect: noop, beginPath: noop, moveTo: noop, lineTo: noop, closePath: noop,
+          stroke: noop, strokeRect: noop, fill: noop, arc: noop, save: noop, restore: noop,
+          translate: noop, createRadialGradient: () => grad, createLinearGradient: () => grad,
+          fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1,
+        };
+        this.nextCtx = dummyCtx as CanvasRenderingContext2D;
+      } else {
+        const nctx = this.nextCanvas.getContext('2d');
+        if (!nctx) throw new Error('Next canvas 2D context not available');
+        this.nextCtx = nctx;
+      }
     }
 
     this.bindInput();
@@ -347,9 +383,9 @@ export class TetrisGame {
 
   private refillQueue() {
     const bag = Object.keys(TETROMINOES);
-    // shuffle
+    // Fisher–Yates shuffle using injected RNG for determinism in tests
     for (let i = bag.length -1; i>0; i--) {
-      const j = Math.floor(Math.random() * (i+1));
+      const j = Math.floor(this.rng() * (i+1));
       [bag[i], bag[j]] = [bag[j], bag[i]];
     }
     this.nextQueue.push(...bag);
@@ -502,15 +538,29 @@ export class TetrisGame {
       }
     }
     if (cleared>0) {
-        if (cleared === 4) this.spawnTetrisLightning(fullRows); else this.spawnGenericLineClear(fullRows);
+      if (cleared === 4) this.spawnTetrisLightning(fullRows); else this.spawnGenericLineClear(fullRows);
       this.stats.score += SCORE_TABLE[cleared as 1|2|3|4] * this.stats.level;
       if (cleared === 4) this.stats.score += TETRIS_BONUS * this.stats.level;
+      this.stats.lines += cleared; // increment total lines
+      const prevLevel = this.stats.level;
       const newLevel = Math.floor(this.stats.lines / 10) + 1;
       if (newLevel !== this.stats.level) {
         this.stats.level = newLevel;
         this.dropInterval = Math.max(100, 1000 - (this.stats.level -1)*75);
+        // Level up event for UI animations
+        try { window.dispatchEvent(new CustomEvent('tetris-level-up', { detail: { level: this.stats.level, lines: this.stats.lines, score: this.stats.score } })); } catch {}
       }
       this.updateStats();
+      // Generic line clear event (after stats update)
+      try {
+        window.dispatchEvent(new CustomEvent('tetris-line-clear', { detail: {
+          cleared,
+          lines: this.stats.lines,
+          score: this.stats.score,
+          level: this.stats.level,
+          levelChanged: newLevel !== prevLevel
+        }}));
+      } catch {}
     }
   }
 
@@ -782,6 +832,7 @@ export class TetrisGame {
   }
 
   private draw() {
+    if (this.headless) return; // skip all rendering work in headless mode
     this.drawBoard();
     this.drawParticles();
     this.drawLightningArcs();
@@ -848,4 +899,49 @@ export class TetrisGame {
     }
     ctx.globalCompositeOperation = prev;
   }
+  
+  // ================== TEST / QA SUPPORT (non-gameplay public helpers) ==================
+  /** Returns a snapshot copy of the current board */
+  public getBoardSnapshot(): (string|null)[][] {
+    return this.board.map(r => r.slice());
+  }
+  /** Returns shallow stats copy */
+  public getStats(): TetrisStats { return { ...this.stats }; }
+  /** Peek next queue (first n upcoming types) */
+  public _debugPeekQueue(n = 7): string[] { return this.nextQueue.slice(0, n); }
+  /** Force-set the entire board (for tests). Size must match current dimensions. */
+  public _debugSetBoard(rows: (string|null)[][]) {
+    if (rows.length !== this.height || rows.some(r => r.length !== this.width)) throw new Error('Bad board size');
+    this.board = rows.map(r => r.slice());
+  }
+  /** Force current active piece; resets rotation & shape. */
+  public _debugForceCurrent(type: string, rotation = 0, x?: number, y = 0) {
+    const shapes = TETROMINOES[type];
+    if (!shapes) throw new Error('Unknown type');
+    const shape = shapes[rotation % 4];
+    const px = (x != null) ? x : Math.floor(this.width /2 - shape[0].length/2);
+    this.current = { type, rotation: rotation%4, x: px, y, shape };
+  }
+  /** Advance gravity one step logic (stepDown + possible lock) */
+  public _debugGravityTick() {
+    const moved = this.stepDown();
+    if (!moved) this.lockPiece();
+  }
+  /** Hard drop through public interface */
+  public _debugHardDrop() { this.hardDrop(); }
+  /** Soft drop single step (not hold loop) */
+  public _debugSoftDrop() { this.softDrop(); }
+  /** Directly clear lines using existing method (validate scoring) */
+  public _debugInvokeClear() { this.clearLines(); }
+  /** Reset without starting RAF loop (headless test use) */
+  public _debugResetNoLoop() {
+    this.board.forEach(r => r.fill(null));
+    this.stats = { score: 0, level: 1, lines: 0 };
+    this.dropInterval = 1000;
+    this.current = null;
+    this.nextQueue = [];
+    this.refillQueue();
+  }
+  /** Whether there is an active current piece (for tests) */
+  public _debugHasCurrent() { return !!this.current; }
 }

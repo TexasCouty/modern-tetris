@@ -45,11 +45,29 @@
   h1 { font-size:24px; margin:0 0 14px; letter-spacing:1.5px; font-weight:600; background:linear-gradient(90deg,var(--accent),var(--accent-alt)); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 4px rgba(0,0,0,.6)); }
   .logo-wrap { width:100%; display:flex; justify-content:center; margin:0 0 12px; }
   .logo-wrap img { max-width:100%; width:210px; height:auto; filter:drop-shadow(0 4px 10px rgba(0,0,0,.55)); border-radius:6px; image-rendering:auto; }
-    .stats { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
-    .stat { font-size:12px; margin:0; font-weight:600; letter-spacing:.5px; display:flex; justify-content:space-between; align-items:baseline; padding:6px 10px 7px; background:linear-gradient(160deg,#1a2430,#121b24 60%); border:1px solid #202c38; border-radius:6px; position:relative; overflow:hidden; }
-    .stat::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(var(--accent-rgb),.15),transparent 40%); mix-blend-mode:overlay; opacity:.55; pointer-events:none; }
-    .stat-label { opacity:.6; font-weight:600; font-size:11px; text-transform:uppercase; letter-spacing:.8px; }
-    .stat-val { font-family: "Consolas","Roboto Mono",monospace; font-size:18px; font-weight:700; color:#fff; text-shadow:0 0 0 transparent, 0 0 10px rgba(var(--accent-rgb),.35); }
+  .stats { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .stats.pro-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .stats.pro-grid .span-2 { grid-column:span 2; }
+  .stat { font-size:12px; margin:0; font-weight:600; letter-spacing:.5px; display:flex; flex-direction:column; gap:3px; padding:8px 12px 9px; background:linear-gradient(155deg,#18222d,#10181f 60%); border:1px solid #202c38; border-radius:8px; position:relative; overflow:hidden; min-height:56px; }
+  .stat::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(var(--accent-rgb),.18),transparent 55%); mix-blend-mode:overlay; opacity:.5; pointer-events:none; }
+  .stat-label { opacity:.58; font-weight:600; font-size:10px; text-transform:uppercase; letter-spacing:.9px; line-height:1; }
+  .stat .stat-val { font-family: "Consolas","Roboto Mono",monospace; font-size:17px; font-weight:700; color:#fff; text-shadow:0 0 0 transparent, 0 0 8px rgba(var(--accent-rgb),.25); line-height:1.15; font-variant-numeric:tabular-nums; }
+  .stat.emphasis .big { font-size:30px; letter-spacing:1px; font-weight:700; }
+  .stat-top { display:flex; justify-content:space-between; align-items:center; }
+  .delta { font-size:11px; font-weight:500; color:#6ee7b7; opacity:0; transform:translateY(4px); transition:.35s; }
+  .delta.visible { opacity:1; transform:translateY(0); }
+  .progress-wrap { margin-top:6px; background:#0c141b; border:1px solid #1d2a36; height:6px; border-radius:4px; position:relative; overflow:hidden; box-shadow:0 0 0 1px #0a0f14 inset, 0 1px 0 0 #22313e; }
+  .progress-bar { position:absolute; inset:0; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-alt)); box-shadow:0 0 0 1px rgba(255,255,255,.06) inset,0 0 10px -2px rgba(var(--accent-rgb),.6),0 0 22px -6px rgba(var(--accent-rgb),.5); transition:width .35s cubic-bezier(.4,.65,.3,1); }
+  .stat.pulse { animation:scorePulse .6s ease; }
+  @keyframes scorePulse { 0%{transform:scale(1);} 30%{transform:scale(1.045);} 60%{transform:scale(1.018);} 100%{transform:scale(1);} }
+  .toast-layer { position:relative; min-height:0; }
+  .toast { position:absolute; top:-6px; right:0; background:linear-gradient(135deg,#243347,#18222d); border:1px solid #2a3a4b; padding:8px 14px 9px; font-size:13px; font-weight:600; letter-spacing:.5px; border-radius:8px; box-shadow:0 6px 20px -8px #000, 0 0 0 1px #0a1015, 0 0 0 1px #2d3c4b inset; display:flex; gap:10px; align-items:center; overflow:hidden; animation:toastIn .55s cubic-bezier(.4,.65,.3,1); }
+  .toast::before { content:""; position:absolute; inset:0; background:radial-gradient(circle at 85% 15%,rgba(var(--accent-rgb),.35),transparent 70%); opacity:.6; pointer-events:none; }
+  .toast.good { color:#a7f3d0; }
+  .toast.bad { color:#fca5a5; }
+  @keyframes toastIn { from { opacity:0; transform:translateY(8px) scale(.97);} to { opacity:1; transform:none;} }
+  .toast.out { animation:toastOut .45s ease forwards; }
+  @keyframes toastOut { to { opacity:0; transform:translateY(-8px) scale(.96); } }
     .divider { height:1px; background:linear-gradient(90deg,transparent,#2c3b4b 40%,#2c3b4b 60%,transparent); margin:12px 0; opacity:.8; }
     /* --- BUTTON REDESIGN: sharp, machined, beveled (no cartoon gloss) --- */
     button { 
@@ -154,12 +172,13 @@
         <div class="logo-wrap">
           <img id="gameLogo" alt="Tetris Logo" decoding="async" />
         </div>
-        <div class="stats">
-          <div id="score" class="stat"><span class="stat-label">Score</span><span id="scoreVal" class="stat-val">0</span></div>
+        <div class="stats pro-grid">
+          <div id="score" class="stat span-2 emphasis"><div class="stat-top"><span class="stat-label">Score</span><span class="delta" id="scoreDelta"></span></div><span id="scoreVal" class="stat-val big">0</span><div class="progress-wrap"><div id="levelProgress" class="progress-bar"></div></div></div>
           <div id="level" class="stat"><span class="stat-label">Level</span><span id="levelVal" class="stat-val">1</span></div>
           <div id="lines" class="stat"><span class="stat-label">Lines</span><span id="linesVal" class="stat-val">0</span></div>
           <div id="highScore" class="stat"><span class="stat-label">High</span><span id="highVal" class="stat-val">0</span></div>
         </div>
+        <div id="toastLayer" class="toast-layer"></div>
         <div class="divider" style="margin-top:10px;"></div>
         <button id="startBtn">Start / Pause</button>
         <button id="resetBtn" style="margin-top:8px;">Reset</button>
@@ -178,6 +197,56 @@
     </div>
   </div>
   <script>
+    // Professional scoreboard enhancements
+    (function(){
+      const nf = new Intl.NumberFormat('en-US');
+      const scoreEl = document.getElementById('scoreVal');
+      const levelEl = document.getElementById('levelVal');
+      const linesEl = document.getElementById('linesVal');
+      const highVal = document.getElementById('highVal');
+      const scoreStat = document.getElementById('score');
+      const levelProgress = document.getElementById('levelProgress');
+      const scoreDelta = document.getElementById('scoreDelta');
+      const toastLayer = document.getElementById('toastLayer');
+      let lastScore = 0;
+      function showToast(text, opts={}) {
+        if(!toastLayer) return; const div = document.createElement('div');
+        div.className = 'toast ' + (opts.type||''); div.textContent = text;
+        toastLayer.appendChild(div);
+        setTimeout(()=> div.classList.add('out'), opts.ttl || 1600);
+        setTimeout(()=> div.remove(), (opts.ttl||1600)+480);
+      }
+      window.addEventListener('tetris-level-up', e => {
+        const { level } = e.detail;
+        showToast('LEVEL '+ level, { type:'good', ttl: 1700 });
+        scoreStat?.classList.add('pulse');
+        setTimeout(()=> scoreStat?.classList.remove('pulse'), 620);
+      });
+      window.addEventListener('tetris-line-clear', e => {
+        const { cleared, score } = e.detail;
+        if (cleared === 4) { showToast('TETRIS +' + nf.format(score - lastScore), { type:'good', ttl:1900 }); }
+        else if (cleared === 3) { showToast('TRIPLE', { type:'good', ttl:1400 }); }
+        else if (cleared === 2) { showToast('DOUBLE', { ttl:1200 }); }
+        else if (cleared === 1) { showToast('LINE', { ttl:1000 }); }
+        if (scoreDelta && score > lastScore) {
+          scoreDelta.textContent = '+' + nf.format(score - lastScore);
+          scoreDelta.classList.add('visible');
+          setTimeout(()=> scoreDelta.classList.remove('visible'), 1200);
+        }
+        lastScore = score;
+      });
+      const observer = new MutationObserver(()=>{
+        const currentLines = parseInt(linesEl?.textContent||'0',10);
+        const into = currentLines % 10;
+        if (levelProgress) levelProgress.style.width = ((into/10)*100).toFixed(1)+'%';
+        // Format numbers once they change (idempotent)
+        if (scoreEl) { const raw = scoreEl.textContent||'0'; const num = Number(raw.replace(/[,]/g,'')); scoreEl.textContent = nf.format(num); }
+        if (highVal) { const raw = highVal.textContent||'0'; const num = Number(raw.replace(/[,]/g,'')); highVal.textContent = nf.format(num); }
+      });
+      const statsRoot = document.querySelector('.stats');
+      if (statsRoot) observer.observe(statsRoot, { subtree:true, characterData:true, childList:true });
+    })();
+  </script>
     // Runtime remote logo injection (no local file). Priority:
     // 1. ?logo= URL param
     // 2. window.__TETRIS_LOGO_URL__ (can be injected by preload or env define)
