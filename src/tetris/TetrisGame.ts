@@ -270,6 +270,9 @@ export class TetrisGame {
   private fallProgress = 0;
   private softDropHeld = false;
   private softDropRepeatAccum = 0;
+  // Tetris special message timing
+  private tetrisMsgUntil = 0;
+  private tetrisMsgText = '';
   private rng: () => number;
   private headless = false;
   private simpleMode = false; // disables beveled draw for debug
@@ -587,12 +590,14 @@ export class TetrisGame {
   }
 
   private spawnTetrisLightning(rows: number[]) {
-    // Replaced with localized row FX: small lightning puffs + sparks, no full-screen arcs
+    // Localized row FX + lightweight lightning arcs + motivational message
     const cellW = this.canvas.width / this.width;
     const cellH = this.canvas.height / this.height;
-    this.flashUntil = 0; // no screen flash
-    this.shakeTime = 0;  // no camera shake
-    this.lightning = []; // not used anymore
+    // Mild flash & shake for emphasis
+    this.flashUntil = performance.now() + 200;
+    this.shakeTime = 180;
+    this.shakeMag = 3;
+    this.lightning = [];
     this.shockwaves = [];
     rows.forEach(r => {
       const rowYMid = (r + 0.5) * cellH;
@@ -621,6 +626,25 @@ export class TetrisGame {
         }
       }
     });
+    // Create a few stylized lightning arcs spanning random horizontal segments
+    const arcCount = 2 + Math.floor(Math.random()*2);
+    for (let i=0;i<arcCount;i++) {
+      const yStart = Math.random() * this.canvas.height * 0.6;
+      const yEnd = yStart + (Math.random()*this.canvas.height*0.3 + 40);
+      const segs = 5 + Math.floor(Math.random()*4);
+      const pts: {x:number;y:number;}[] = [];
+      const xBase = this.canvas.width * (0.15 + Math.random()*0.7);
+      for (let s=0; s<=segs; s++) {
+        const t = s / segs;
+        const jitterX = (Math.random()-0.5) * 40;
+        const jitterY = (Math.random()-0.5) * 20;
+        pts.push({ x: xBase + jitterX, y: yStart + (yEnd - yStart)*t + jitterY });
+      }
+      this.lightning.push({ points: pts, life:0, ttl: 260 + Math.random()*120 });
+    }
+    // Motivational message overlay
+    this.tetrisMsgText = 'WHATEVER IT TAKES';
+    this.tetrisMsgUntil = performance.now() + 900;
   }
 
   private updateParticles(delta:number) {
@@ -859,6 +883,30 @@ export class TetrisGame {
     this.drawLightningArcs();
     this.drawShockwaves();
     this.drawRowPuffs();
+    // Tetris message overlay
+    if (this.tetrisMsgUntil && performance.now() < this.tetrisMsgUntil) {
+      const remain = this.tetrisMsgUntil - performance.now();
+      const ttl = 900;
+      const t = 1 - (remain / ttl); // 0 -> 1
+      const fadeIn = Math.min(1, t / 0.15);
+      const fadeOut = Math.min(1, remain / 180); // last 180ms fade
+      const alpha = Math.min(fadeIn, fadeOut);
+      const flicker = 0.85 + Math.sin(performance.now()/40)*0.15;
+      const finalA = alpha * flicker;
+      this.ctx.save();
+      this.ctx.translate(0, -10); // slight raise to avoid overlapping bottom pieces
+      this.ctx.font = '700 22px system-ui,Segoe UI,Roboto,Arial';
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      const cx = this.canvas.width/2;
+      const cy = this.canvas.height/2;
+      // Glow layers
+      this.ctx.fillStyle = `rgba(180,220,255,${finalA*0.25})`;
+      for (let g=0; g<4; g++) this.ctx.fillText(this.tetrisMsgText, cx, cy);
+      this.ctx.fillStyle = `rgba(235,245,255,${finalA})`;
+      this.ctx.fillText(this.tetrisMsgText, cx, cy);
+      this.ctx.restore();
+    }
     this.ctx.restore();
     if (this.flashUntil && performance.now() < this.flashUntil) {
       const remain = (this.flashUntil - performance.now())/220;
