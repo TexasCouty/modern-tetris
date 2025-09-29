@@ -272,6 +272,53 @@
   .foot-bar { margin-top:6px; font-size:10px; opacity:0.75; text-align:center; background:linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.015)); border:1px solid rgba(255,255,255,0.09); padding:4px 6px 5px; border-radius:6px; font-weight:500; letter-spacing:.4px; }
     .foot { font-size:12px; opacity:0.65; line-height:1.4; }
     @media (max-width: 520px){ .panel { width:100%; } .app-shell { gap:16px; } .control-grid { gap:6px; } .control-grid button { width:48px; height:48px; } #gameWrap { margin:0 auto; } }
+    /* --- PANEL BUTTON / KEYBOARD UNIFICATION (Start, Reset, control arrows) --- */
+    .panel-actions { display:flex; gap:6px; margin-top:4px; justify-content:center; }
+    .panel-btn { flex:1; position:relative; font-family:inherit; font-size:11px; letter-spacing:.55px; font-weight:600; padding:8px 10px 9px; border:none; cursor:pointer; border-radius:9px; color:#dce5ef; background:var(--stat-metal-base); display:inline-flex; align-items:center; justify-content:center; isolation:isolate; }
+    .panel-btn[data-variant="primary"] { color:#f5f9ff; }
+    .panel-btn::before { content:""; position:absolute; inset:3px; border-radius:inherit; background:linear-gradient(90deg, rgba(102,209,255,0) 0%, rgba(102,209,255,0.45) 50%, rgba(102,209,255,0) 100%); opacity:.7; mix-blend-mode:screen; pointer-events:none; }
+    .panel-btn::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:
+        repeating-linear-gradient(135deg, rgba(255,255,255,0.07) 0 2px, rgba(255,255,255,0) 2px 7px),
+        linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0) 40%),
+        linear-gradient(325deg, rgba(0,0,0,0.55), rgba(0,0,0,0) 45%);
+      mix-blend-mode:overlay; opacity:.9; transition:opacity .25s; }
+    .panel-btn { box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.06),
+        inset 0 1px 2px rgba(255,255,255,0.12),
+        inset -1px -1px 2px rgba(0,0,0,0.62),
+        0 3px 8px -4px rgba(0,0,0,0.85),
+        0 0 0 1px rgba(60,90,120,0.22); transition: box-shadow .28s, transform .18s, filter .25s; }
+    .panel-btn:hover { box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.09),
+        inset 0 1px 3px rgba(180,210,255,0.28),
+        inset -1px -1px 2px rgba(0,0,0,0.68),
+        0 4px 14px -5px rgba(100,140,255,0.55),
+        0 0 0 1px rgba(120,156,255,0.30),
+        0 0 10px -2px rgba(120,156,255,0.42); }
+    .panel-btn:active { transform:translateY(2px); }
+    #startBtn.running { opacity:.65; filter:saturate(.85); }
+    /* Control grid button restyle */
+    .control-grid button { background:var(--stat-metal-base); border:none; border-radius:7px; position:relative; color:#f0f6ff; box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.05),
+        inset 0 1px 2px rgba(255,255,255,0.10),
+        inset -1px -1px 2px rgba(0,0,0,0.58),
+        0 2px 6px -3px rgba(0,0,0,0.85),
+        0 0 0 1px rgba(60,90,120,0.22); transition: box-shadow .25s, transform .15s; }
+    .control-grid button::before { content:""; position:absolute; inset:3px; border-radius:inherit; background:linear-gradient(90deg, rgba(102,209,255,0) 0%, rgba(102,209,255,0.4) 55%, rgba(102,209,255,0) 100%); mix-blend-mode:screen; opacity:.7; pointer-events:none; }
+    .control-grid button::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:
+        linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0) 38%),
+        linear-gradient(325deg, rgba(0,0,0,0.52), rgba(0,0,0,0) 45%); mix-blend-mode:overlay; opacity:.85; }
+    .control-grid button:hover { box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,0.085),
+        inset 0 1px 3px rgba(180,210,255,0.25),
+        inset -1px -1px 2px rgba(0,0,0,0.6),
+        0 2px 10px -3px rgba(90,140,255,0.55),
+        0 0 0 1px rgba(120,156,255,0.28); }
+    .control-grid button:active { transform:translateY(2px); }
+    .control-cluster { width:100%; text-align:center; }
+    .control-grid { margin:0 auto; }
+    @media (forced-colors: active) { .panel-btn, .control-grid button { background:Canvas; box-shadow:0 0 0 1px ButtonText; } .panel-btn::before, .panel-btn::after, .control-grid button::before, .control-grid button::after { display:none; } }
+    /* --- END PANEL BUTTON / KEYBOARD UNIFICATION --- */
     /* --- STEP 4: PANEL LIGHTNING GLOW + CRACKLE OVERLAY --- */
     :root {
       --panel-glow-cyan: #66d1ff;
@@ -340,9 +387,9 @@
         <div id="toastLayer" class="toast-layer"></div>
         <div class="panel-bottom">
           <div class="divider" style="margin:6px 0 4px;"></div>
-          <div style="display:flex; gap:6px; margin-top:4px; justify-content:center;">
-            <button id="startBtn" class="btn-primary" style="flex:1;">Start</button>
-            <button id="resetBtn" class="btn-secondary" style="flex:0.9;">Reset</button>
+          <div class="panel-actions">
+            <button id="startBtn" class="panel-btn" data-variant="primary">Start</button>
+            <button id="resetBtn" class="panel-btn" data-variant="secondary">Reset</button>
           </div>
           <div class="divider" style="margin:6px 0 4px;"></div>
           <div class="control-cluster">
