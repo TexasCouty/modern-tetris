@@ -48,7 +48,13 @@
     @keyframes toastIn { 0%{ opacity:0; transform:translateY(-8px) scale(.95);} 100%{ opacity:1; transform:translateY(0) scale(1);} }
     @keyframes toastOut { 0%{ opacity:1; transform:translateY(0) scale(1);} 100%{ opacity:0; transform:translateY(-8px) scale(.93);} }
     .divider { height:1px; background:linear-gradient(90deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02)); }
-  button { cursor:pointer; outline:none; background:linear-gradient(150deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02)); color:#fff; border:1px solid rgba(255,255,255,0.14); border-radius:7px; font-size:11px; padding:5px 8px 6px; font-weight:600; letter-spacing:.35px; font-family:inherit; transition:background .15s, transform .13s, border-color .18s; position:relative; }
+  button { cursor:pointer; outline:none; background:linear-gradient(150deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02)); color:#fff; border:1px solid rgba(255,255,255,0.14); border-radius:7px; font-size:11px; padding:5px 8px 6px; font-weight:600; letter-spacing:.35px; font-family:inherit; transition:background .15s, transform .13s, border-color .18s, box-shadow .25s; position:relative; }
+  .btn-primary { background:linear-gradient(140deg,#4f7ff9,#6f4ff9); border-color:#5a6ff5; box-shadow:0 4px 10px -4px rgba(80,120,255,0.55),0 0 0 1px rgba(255,255,255,0.08) inset; }
+  .btn-primary:hover { background:linear-gradient(140deg,#6b8ffb,#855cfb); }
+  .btn-primary:active { transform:translateY(2px); }
+  .btn-secondary { background:linear-gradient(150deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border-color:rgba(255,255,255,0.14); opacity:0.85; }
+  .btn-secondary:hover { background:linear-gradient(145deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)); opacity:0.95; }
+  .btn-secondary:active { transform:translateY(2px); }
     button:hover { background:linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.05)); }
     button:active { transform:translateY(2px); }
   .control-grid { display:grid; grid-template-columns:repeat(3,30px); grid-template-rows:repeat(3,30px); gap:4px; justify-content:center; margin:6px auto 0; width:max-content; }
@@ -84,9 +90,9 @@
         <div id="toastLayer" class="toast-layer"></div>
         <div class="panel-bottom">
           <div class="divider" style="margin:6px 0 4px;"></div>
-          <div style="display:flex; gap:4px; margin-top:4px;">
-            <button id="startBtn" style="flex:1;">Start</button>
-            <button id="resetBtn" style="flex:1;">Reset</button>
+          <div style="display:flex; gap:6px; margin-top:4px; justify-content:center;">
+            <button id="startBtn" class="btn-primary" style="flex:1;">Start</button>
+            <button id="resetBtn" class="btn-secondary" style="flex:0.9;">Reset</button>
           </div>
           <div class="divider" style="margin:6px 0 4px;"></div>
           <div class="control-grid">
