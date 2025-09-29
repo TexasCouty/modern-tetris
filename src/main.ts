@@ -106,16 +106,29 @@ function boot() {
   }
 
   function restartGame() {
-    game.reset();
-  _overlay.classList.remove('visible');
-  _overlay.textContent = '';
-  _startBtn.textContent = 'Pause';
+    game.reset(true); // full restart & auto-start
+    _overlay.classList.remove('visible');
+    _overlay.textContent = '';
+    _startBtn.textContent = 'Pause';
+    gameOverFlag = false;
+  }
+
+  function resetToReadyState() {
+    game.reset(false); // reset but do NOT start
+    // Manually zero visible stats (reset doesn't emit onStats without a piece)
+  (scoreEl as HTMLElement).textContent = '0';
+  (levelEl as HTMLElement).textContent = '1';
+  (linesEl as HTMLElement).textContent = '0';
+    if (progressBar) progressBar.style.width = '0%';
+    _overlay.textContent = 'READY';
+    _overlay.classList.add('visible');
+    _startBtn.textContent = 'Start';
     gameOverFlag = false;
   }
 
   startBtn.addEventListener('click', () => { if (gameOverFlag) restartGame(); else togglePauseUi(); });
   if (location.search.includes('debug=1')) console.debug('[tetris] start button listener attached');
-  resetBtn?.addEventListener('click', () => { restartGame(); });
+  resetBtn?.addEventListener('click', () => { resetToReadyState(); });
   btnUp?.addEventListener('click', () => game.rotateCW());
   btnLeft?.addEventListener('click', () => game.moveLeft());
   btnRight?.addEventListener('click', () => game.moveRight());
@@ -127,7 +140,7 @@ function boot() {
       e.preventDefault();
       if (gameOverFlag) restartGame(); else togglePauseUi();
     }
-    if (e.key === 'r' || e.key === 'R') { restartGame(); }
+  if (e.key === 'r' || e.key === 'R') { resetToReadyState(); }
   });
 
   // Mobile custom event wiring

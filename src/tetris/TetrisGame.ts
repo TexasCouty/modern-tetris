@@ -360,7 +360,7 @@ export class TetrisGame {
     this.running = false;
   }
 
-  reset() {
+  reset(startImmediately: boolean = true) {
     this.board.forEach(row => row.fill(null));
     this.stats = { score: 0, level: 1, lines: 0 };
     this.dropInterval = 1000;
@@ -378,7 +378,7 @@ export class TetrisGame {
     this.refillQueue();
     // Force loop re-init (game over stops it). Use start() so RAF resumes.
     this.running = false;
-    this.start();
+    if (startImmediately) this.start();
   }
 
   // (loop moved to end with enhanced FX handling)
