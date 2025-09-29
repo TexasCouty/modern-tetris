@@ -20,14 +20,14 @@
     #gameWrap { position:relative; }
     #overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:54px; font-weight:700; letter-spacing:2px; font-family:inherit; background:rgba(0,0,0,0.55); backdrop-filter: blur(2px); color:#fff; opacity:0; transition:opacity .25s; pointer-events:none; border-radius:6px; }
     #overlay.visible { opacity:1; }
-    .panel { width:280px; max-width:100%; }
-  .logo-wrap { text-align:center; margin:0 0 8px; }
+    .panel { width:260px; max-width:100%; display:flex; flex-direction:column; }
+  .logo-wrap { text-align:center; margin:0 0 4px; }
   .logo-wrap img { width:100%; height:auto; display:block; margin:0 auto; object-fit:contain; filter:drop-shadow(0 3px 10px rgba(0,0,0,0.55)); }
-  .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
-  .stat { background:linear-gradient(150deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02)); padding:6px 8px 8px; border-radius:12px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 2px 5px -2px rgba(0,0,0,0.6); display:flex; flex-direction:column; justify-content:flex-start; min-height:80px; }
+  .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .stat { background:linear-gradient(150deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02)); padding:5px 6px 6px; border-radius:11px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 2px 5px -2px rgba(0,0,0,0.6); display:flex; flex-direction:column; justify-content:flex-start; min-height:68px; }
   .stat.emphasis { background:linear-gradient(155deg, rgba(120,156,255,0.22), rgba(120,156,255,0.07)); box-shadow:0 4px 14px -6px rgba(48,84,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.08); }
-  .stat-label { font-size:10px; text-transform:uppercase; letter-spacing:.85px; color:#abb1ba; font-weight:600; }
-  .stat-val { display:block; font-size:20px; font-weight:700; margin-top:1px; font-variant-numeric: tabular-nums; line-height:1.05; }
+  .stat-label { font-size:9px; text-transform:uppercase; letter-spacing:.8px; color:#b2b7c0; font-weight:600; }
+  .stat-val { display:block; font-size:18px; font-weight:700; margin-top:1px; font-variant-numeric: tabular-nums; line-height:1.05; }
     .stat.emphasis.pulse { animation:statPulse 0.65s ease; }
     @keyframes statPulse { 0%{ transform:scale(1); } 35%{ transform:scale(1.035); } 70%{ transform:scale(0.992); } 100%{ transform:scale(1); } }
   .progress-wrap { height:5px; margin-top:6px; border-radius:3px; background:rgba(255,255,255,0.10); overflow:hidden; position:relative; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.35); }
@@ -41,11 +41,11 @@
     @keyframes toastIn { 0%{ opacity:0; transform:translateY(-8px) scale(.95);} 100%{ opacity:1; transform:translateY(0) scale(1);} }
     @keyframes toastOut { 0%{ opacity:1; transform:translateY(0) scale(1);} 100%{ opacity:0; transform:translateY(-8px) scale(.93);} }
     .divider { height:1px; background:linear-gradient(90deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02)); }
-  button { cursor:pointer; outline:none; background:linear-gradient(150deg, rgba(255,255,255,0.12), rgba(255,255,255,0.025)); color:#fff; border:1px solid rgba(255,255,255,0.14); border-radius:9px; font-size:14px; padding:8px 12px 9px; font-weight:600; letter-spacing:.5px; font-family:inherit; transition:background .18s, transform .14s, border-color .22s; position:relative; }
+  button { cursor:pointer; outline:none; background:linear-gradient(150deg, rgba(255,255,255,0.11), rgba(255,255,255,0.02)); color:#fff; border:1px solid rgba(255,255,255,0.14); border-radius:8px; font-size:12px; padding:6px 10px 7px; font-weight:600; letter-spacing:.4px; font-family:inherit; transition:background .16s, transform .13s, border-color .2s; position:relative; }
     button:hover { background:linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.05)); }
     button:active { transform:translateY(2px); }
-  .control-grid { display:grid; grid-template-columns:repeat(3,46px); grid-template-rows:repeat(3,46px); gap:6px; justify-content:center; margin:10px auto 0; width:max-content; }
-  .control-grid button { width:46px; height:46px; font-size:18px; font-weight:600; padding:0; display:flex; align-items:center; justify-content:center; }
+  .control-grid { display:grid; grid-template-columns:repeat(3,36px); grid-template-rows:repeat(3,36px); gap:4px; justify-content:center; margin:8px auto 0; width:max-content; }
+  .control-grid button { width:36px; height:36px; font-size:15px; font-weight:600; padding:0; display:flex; align-items:center; justify-content:center; }
   .control-grid .blank { pointer-events:none; opacity:0; }
     .foot { font-size:12px; opacity:0.65; line-height:1.4; }
     @media (max-width: 520px){ .panel { width:100%; } .app-shell { gap:16px; } .control-grid { gap:6px; } .control-grid button { width:48px; height:48px; } #gameWrap { margin:0 auto; } }
@@ -73,12 +73,12 @@
           <div id="highScore" class="stat"><span class="stat-label">High</span><span id="highVal" class="stat-val">0</span></div>
         </div>
         <div id="toastLayer" class="toast-layer"></div>
-        <div class="divider" style="margin-top:6px;"></div>
-        <div style="display:flex; gap:6px; margin-top:6px;">
-          <button id="startBtn" style="flex:1;">Start / Pause</button>
+        <div class="divider" style="margin-top:4px;"></div>
+        <div style="display:flex; gap:4px; margin-top:4px;">
+          <button id="startBtn" style="flex:1;">Start</button>
           <button id="resetBtn" style="flex:1;">Reset</button>
         </div>
-        <div class="divider" style="margin:10px 0 6px;"></div>
+        <div class="divider" style="margin:8px 0 4px;"></div>
         <div class="control-grid">
           <div class="blank"></div>
           <button id="btnUp">▲</button>
@@ -90,7 +90,7 @@
           <button id="btnHard">⤓</button>
           <div class="blank"></div>
         </div>
-        <div class="foot" style="margin-top:12px;">
+        <div class="foot" style="margin-top:8px; font-size:11px;">
           Keyboard: Arrows / Space / Shift / R
         </div>
       </div>
