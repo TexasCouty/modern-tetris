@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Modern Tetris</title>
   <!-- uiEnhancements is imported inside main.ts; removed duplicate script include to prevent double MutationObservers & event handlers -->
+  <!-- STEP 1: Scoreboard Typography & Text Effects (geometric tech font + metallic gradient + cyan glow bevel) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@600;700&display=swap" rel="stylesheet" />
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
@@ -40,6 +44,41 @@
   .stat.emphasis { background:linear-gradient(155deg, rgba(120,156,255,0.22), rgba(120,156,255,0.07)); box-shadow:0 4px 14px -6px rgba(48,84,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.08); }
   .stat-label { font-size:10px; text-transform:uppercase; letter-spacing:.65px; color:#b9bec6; font-weight:600; }
   .stat-val { display:block; font-size:15px; font-weight:700; margin-top:2px; font-variant-numeric: tabular-nums; font-feature-settings:'tnum','ss01'; line-height:1.05; }
+    /* --- STEP 1 SCOREBOARD TYPOGRAPHY --- */
+    :root {
+      --score-text-grad: linear-gradient(to bottom,#9FB5D1 0%, #2E3A4F 55%, #141923 100%);
+      --score-glow: #66D1FF;
+      --score-bevel-hi: rgba(255,255,255,0.38);
+      --score-bevel-shadow: rgba(0,0,0,0.72);
+    }
+    /* Apply only to numeric scoreboard values so other text remains readable */
+    #scoreVal, #linesVal, #levelVal, #highVal {
+      font-family: 'Oxanium', system-ui,-apple-system,'Segoe UI',Roboto,Inter,Arial,sans-serif;
+      background: var(--score-text-grad);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      letter-spacing: .7px;
+      position: relative;
+      /* Metallic bevel + cyan energized glow */
+      text-shadow:
+        -1px -1px 1px var(--score-bevel-hi), /* top-left bevel highlight */
+        1px 1px 1px var(--score-bevel-shadow), /* bottom-right shadow */
+        0 0 4px rgba(102,209,255,0.65),
+        0 0 10px rgba(102,209,255,0.38),
+        0 0 18px rgba(102,209,255,0.16);
+    }
+    /* Emphasize main score slightly larger for hierarchy */
+    #scoreVal { font-size:28px; line-height:1; }
+    /* Keep high score badge digits aligned but not overpowering */
+    #highVal { font-size:14px; letter-spacing:.6px; }
+    /* Accessibility: fallback color when background-clip unsupported */
+    @supports not ((background-clip: text) or (-webkit-background-clip: text)) {
+      #scoreVal, #linesVal, #levelVal, #highVal { color:#d9e2ec; text-shadow:0 0 6px rgba(102,209,255,0.55); }
+    }
+    /* Respect Windows High Contrast / forced-colors by reverting gradient */
+    @media (forced-colors: active) {
+      #scoreVal, #linesVal, #levelVal, #highVal { background:none; color:ButtonText; text-shadow:none; }
+    }
+    /* --- END STEP 1 --- */
     .stat.emphasis.pulse { animation:statPulse 0.65s ease; }
     @keyframes statPulse { 0%{ transform:scale(1); } 35%{ transform:scale(1.035); } 70%{ transform:scale(0.992); } 100%{ transform:scale(1); } }
   /* Score pop animation */
