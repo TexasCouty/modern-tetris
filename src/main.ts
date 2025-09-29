@@ -51,6 +51,7 @@ function boot() {
   const linesCard = document.getElementById('lines');
 
   const highBadge = document.querySelector('.high-badge');
+  const scoreCardEl = document.getElementById('score');
   const game = new TetrisGame({
     width: 10,
     height: 20,
@@ -115,9 +116,11 @@ function boot() {
 
   function togglePauseUi() {
     if (!gameRunning()) {
-      _overlay.classList.remove('visible');
+  _overlay.classList.remove('visible');
+  _overlay.classList.remove('ready-pulse');
       _startBtn.textContent = 'Pause';
       _startBtn.classList.add('running');
+  scoreCardEl?.classList.add('score-active');
       if (location.search.includes('debug=1')) console.debug('[tetris] starting / resuming game');
       game.start();
       gameOverFlag = false;
@@ -133,14 +136,17 @@ function boot() {
       _overlay.classList.add('visible');
     }
     if (!gameRunning()) _startBtn.classList.remove('running');
+    if (!gameRunning()) scoreCardEl?.classList.remove('score-active');
   }
 
   function restartGame() {
     game.reset(true); // full restart & auto-start
-    _overlay.classList.remove('visible');
+  _overlay.classList.remove('visible');
+  _overlay.classList.remove('ready-pulse');
     _overlay.textContent = '';
   _startBtn.textContent = 'Pause';
   _startBtn.classList.add('running');
+  scoreCardEl?.classList.add('score-active');
     gameOverFlag = false;
   }
 
@@ -151,10 +157,12 @@ function boot() {
   (levelEl as HTMLElement).textContent = '1';
   (linesEl as HTMLElement).textContent = '0';
     if (progressBar) progressBar.style.width = '0%';
-    _overlay.textContent = 'READY';
+  _overlay.textContent = 'READY';
     _overlay.classList.add('visible');
+  _overlay.classList.add('ready-pulse');
   _startBtn.textContent = 'Start';
   _startBtn.classList.remove('running');
+  scoreCardEl?.classList.remove('score-active');
     gameOverFlag = false;
   }
 

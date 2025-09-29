@@ -50,6 +50,18 @@
   .lines-flash { animation:linesFlash .5s ease; }
   /* Start button running fade */
   #startBtn.running { opacity:.55; }
+    /* Active score subtle breathing glow */
+    @keyframes scoreActiveGlow { 0%{ box-shadow:0 4px 14px -6px rgba(48,84,255,0.55),0 0 0 1px rgba(120,156,255,0.25),0 0 8px -2px rgba(120,156,255,0.55) inset; }
+      50%{ box-shadow:0 4px 16px -6px rgba(90,140,255,0.75),0 0 0 1px rgba(150,176,255,0.35),0 0 14px -2px rgba(140,170,255,0.85) inset; }
+      100%{ box-shadow:0 4px 14px -6px rgba(48,84,255,0.55),0 0 0 1px rgba(120,156,255,0.25),0 0 8px -2px rgba(120,156,255,0.55) inset; } }
+    .score-active.score-primary { animation: scoreActiveGlow 3s ease-in-out infinite; }
+    /* READY electric pulse */
+    @keyframes readyPulse { 0%{ text-shadow:0 0 8px rgba(120,156,255,0.55),0 0 18px rgba(94,140,255,0.25); opacity:0.85; }
+      45%{ text-shadow:0 0 16px rgba(160,200,255,0.9),0 0 34px rgba(120,156,255,0.6); opacity:1; }
+      100%{ text-shadow:0 0 8px rgba(120,156,255,0.55),0 0 18px rgba(94,140,255,0.25); opacity:0.85; } }
+    #overlay.ready-pulse { animation: readyPulse 1.8s ease-in-out infinite; }
+    /* Start button energy hover */
+    .btn-primary:not(.running):hover { box-shadow:0 0 0 1px rgba(255,255,255,0.25) inset,0 0 12px 2px rgba(120,156,255,0.65),0 4px 10px -3px rgba(48,84,255,0.6); }
   .progress-wrap { height:5px; margin-top:6px; border-radius:3px; background:rgba(255,255,255,0.12); overflow:hidden; position:relative; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4); }
   .progress-bar { position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg,#4f7ff9,#8b5cf6); box-shadow:0 0 0 1px rgba(255,255,255,0.1),0 0 10px -2px #4f7ff9; transition:width .25s cubic-bezier(.4,.0,.2,1); }
     .delta { font-size:12px; font-weight:600; color:#10b981; opacity:0; transform:translateY(4px); transition: all .3s; }
