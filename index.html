@@ -10,8 +10,8 @@
     * { box-sizing: border-box; }
     html, body { height:100%; }
     body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; background: radial-gradient(circle at 30% 20%, #1f2535 0%, #0d1016 70%); color:#e5e7eb; -webkit-font-smoothing: antialiased; }
-    #stage { padding:16px; }
-    .app-shell { display:flex; gap:28px; align-items:flex-start; justify-content:center; max-width:980px; margin:0 auto; }
+  #stage { padding:10px 12px; }
+  .app-shell { display:flex; gap:18px; align-items:flex-start; justify-content:center; max-width:900px; margin:0 auto; }
     @media (max-width: 760px){ .app-shell { flex-direction:column; align-items:stretch; gap:20px; } #stage{ padding:12px 10px 40px; } }
     canvas { background:#06080d; display:block; image-rendering:pixelated; box-shadow:0 0 0 1px rgba(255,255,255,0.06),0 4px 16px -4px rgba(0,0,0,0.8); border-radius:6px; }
     @media (max-width: 380px) { canvas { width:240px; height:480px; } }
@@ -21,16 +21,16 @@
     #overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:54px; font-weight:700; letter-spacing:2px; font-family:inherit; background:rgba(0,0,0,0.55); backdrop-filter: blur(2px); color:#fff; opacity:0; transition:opacity .25s; pointer-events:none; border-radius:6px; }
     #overlay.visible { opacity:1; }
     .panel { width:280px; max-width:100%; }
-  .logo-wrap { text-align:center; margin:0 0 14px; }
-  .logo-wrap img { max-width:100%; height:80px; width:auto; display:block; margin:0 auto; object-fit:contain; filter:drop-shadow(0 4px 12px rgba(0,0,0,0.6)); }
-  .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
-  .stat { background:linear-gradient(145deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); padding:12px 14px 14px; border-radius:14px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 2px 6px -2px rgba(0,0,0,0.7); display:flex; flex-direction:column; justify-content:space-between; min-height:120px; }
+  .logo-wrap { text-align:center; margin:0 0 8px; }
+  .logo-wrap img { max-width:100%; height:76px; width:auto; display:block; margin:0 auto; object-fit:contain; filter:drop-shadow(0 3px 10px rgba(0,0,0,0.55)); }
+  .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+  .stat { background:linear-gradient(150deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02)); padding:8px 10px 10px; border-radius:12px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 2px 5px -2px rgba(0,0,0,0.65); display:flex; flex-direction:column; justify-content:flex-start; min-height:94px; }
   .stat.emphasis { background:linear-gradient(155deg, rgba(120,156,255,0.22), rgba(120,156,255,0.07)); box-shadow:0 4px 14px -6px rgba(48,84,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.08); }
-  .stat-label { font-size:12px; text-transform:uppercase; letter-spacing:1px; color:#9ca3af; font-weight:600; }
-  .stat-val { display:block; font-size:28px; font-weight:700; margin-top:4px; font-variant-numeric: tabular-nums; line-height:1.05; }
+  .stat-label { font-size:11px; text-transform:uppercase; letter-spacing:.9px; color:#a0a6b1; font-weight:600; }
+  .stat-val { display:block; font-size:24px; font-weight:700; margin-top:2px; font-variant-numeric: tabular-nums; line-height:1.05; }
     .stat.emphasis.pulse { animation:statPulse 0.65s ease; }
     @keyframes statPulse { 0%{ transform:scale(1); } 35%{ transform:scale(1.035); } 70%{ transform:scale(0.992); } 100%{ transform:scale(1); } }
-  .progress-wrap { height:6px; margin-top:10px; border-radius:4px; background:rgba(255,255,255,0.12); overflow:hidden; position:relative; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.4); }
+  .progress-wrap { height:5px; margin-top:6px; border-radius:3px; background:rgba(255,255,255,0.10); overflow:hidden; position:relative; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.35); }
   .progress-bar { position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg,#4f7ff9,#8b5cf6); box-shadow:0 0 0 1px rgba(255,255,255,0.1),0 0 10px -2px #4f7ff9; transition:width .25s cubic-bezier(.4,.0,.2,1); }
     .delta { font-size:12px; font-weight:600; color:#10b981; opacity:0; transform:translateY(4px); transition: all .3s; }
     .delta.visible { opacity:1; transform:translateY(0); }
@@ -41,11 +41,11 @@
     @keyframes toastIn { 0%{ opacity:0; transform:translateY(-8px) scale(.95);} 100%{ opacity:1; transform:translateY(0) scale(1);} }
     @keyframes toastOut { 0%{ opacity:1; transform:translateY(0) scale(1);} 100%{ opacity:0; transform:translateY(-8px) scale(.93);} }
     .divider { height:1px; background:linear-gradient(90deg,rgba(255,255,255,0.08),rgba(255,255,255,0.02)); }
-    button { cursor:pointer; outline:none; background:linear-gradient(145deg, rgba(255,255,255,0.14), rgba(255,255,255,0.03)); color:#fff; border:1px solid rgba(255,255,255,0.15); border-radius:10px; font-size:15px; padding:10px 14px; font-weight:600; letter-spacing:.5px; font-family:inherit; transition:background .2s, transform .15s, border-color .25s; position:relative; }
+  button { cursor:pointer; outline:none; background:linear-gradient(150deg, rgba(255,255,255,0.12), rgba(255,255,255,0.025)); color:#fff; border:1px solid rgba(255,255,255,0.14); border-radius:9px; font-size:14px; padding:8px 12px 9px; font-weight:600; letter-spacing:.5px; font-family:inherit; transition:background .18s, transform .14s, border-color .22s; position:relative; }
     button:hover { background:linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0.05)); }
     button:active { transform:translateY(2px); }
-  .control-grid { display:grid; grid-template-columns:repeat(3,52px); grid-template-rows:repeat(3,52px); gap:8px; justify-content:center; margin:14px auto 0; width:max-content; }
-  .control-grid button { width:52px; height:52px; font-size:19px; font-weight:600; padding:0; display:flex; align-items:center; justify-content:center; }
+  .control-grid { display:grid; grid-template-columns:repeat(3,46px); grid-template-rows:repeat(3,46px); gap:6px; justify-content:center; margin:10px auto 0; width:max-content; }
+  .control-grid button { width:46px; height:46px; font-size:18px; font-weight:600; padding:0; display:flex; align-items:center; justify-content:center; }
   .control-grid .blank { pointer-events:none; opacity:0; }
     .foot { font-size:12px; opacity:0.65; line-height:1.4; }
     @media (max-width: 520px){ .panel { width:100%; } .app-shell { gap:16px; } .control-grid { gap:6px; } .control-grid button { width:48px; height:48px; } #gameWrap { margin:0 auto; } }
@@ -73,10 +73,12 @@
           <div id="highScore" class="stat"><span class="stat-label">High</span><span id="highVal" class="stat-val">0</span></div>
         </div>
         <div id="toastLayer" class="toast-layer"></div>
-        <div class="divider" style="margin-top:10px;"></div>
-        <button id="startBtn">Start / Pause</button>
-        <button id="resetBtn" style="margin-top:8px;">Reset</button>
-        <div class="divider" style="margin:12px 0 8px;"></div>
+        <div class="divider" style="margin-top:6px;"></div>
+        <div style="display:flex; gap:6px; margin-top:6px;">
+          <button id="startBtn" style="flex:1;">Start / Pause</button>
+          <button id="resetBtn" style="flex:1;">Reset</button>
+        </div>
+        <div class="divider" style="margin:10px 0 6px;"></div>
         <div class="control-grid">
           <div class="blank"></div>
           <button id="btnUp">▲</button>
