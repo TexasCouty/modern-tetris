@@ -121,7 +121,14 @@ function boot() {
         void (highBadge as HTMLElement).offsetWidth;
         highBadge.classList.add('badge-pop');
       }
+      // Show CAP badge (still) and also use game overlay to announce
       showCapHighBadge();
+      if (overlay) {
+        overlay.classList.add('visible');
+        overlay.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:20px;">\n          <img src="/public/cap-badge.png" alt="CAP" style="width:160px;height:auto;filter:drop-shadow(0 0 18px rgba(120,196,255,0.85)) drop-shadow(0 0 38px rgba(102,209,255,0.55));"/>\n          <div style="font-size:46px;letter-spacing:3px;font-weight:800;background:linear-gradient(135deg,#b6dfff,#5fa9ff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 22px rgba(120,196,255,.85),0 0 44px rgba(120,196,255,.35);">NEW HIGH SCORE</div>\n        </div>`;
+        // Remove any countdown/pulse classes to avoid conflicts
+        overlay.classList.remove('ready-pulse','counting');
+      }
     }
   });
 
