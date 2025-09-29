@@ -24,11 +24,17 @@
   .panel-bottom { margin-top:10px; }
   .logo-wrap { text-align:center; margin:0 0 4px; }
   .logo-wrap img { width:100%; height:auto; max-height:180px; display:block; margin:0 auto; object-fit:contain; filter:drop-shadow(0 3px 10px rgba(0,0,0,0.55)); }
-  .stats { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
-  .stat { background:linear-gradient(150deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02)); padding:4px 6px 5px; border-radius:10px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 2px 4px -2px rgba(0,0,0,0.55); display:flex; flex-direction:column; justify-content:flex-start; min-height:56px; }
+  .stats { display:flex; flex-direction:column; gap:8px; }
+  .stat { background:linear-gradient(150deg, rgba(255,255,255,0.055), rgba(255,255,255,0.02)); padding:6px 8px 7px; border-radius:10px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.04),0 2px 4px -2px rgba(0,0,0,0.55); display:flex; flex-direction:column; justify-content:flex-start; min-height:50px; }
+  .score-primary { min-height:78px; padding:8px 10px 10px; }
+  .score-primary .stat-val { font-size:22px; }
+  .mini-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; }
+  .stat.mini { min-height:48px; padding:6px 8px 7px; }
+  .high-badge { position:absolute; top:6px; right:8px; background:linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05)); border:1px solid rgba(255,255,255,0.18); padding:2px 8px 3px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:.5px; display:flex; align-items:center; gap:4px; box-shadow:0 2px 4px -2px rgba(0,0,0,0.6); }
+  .high-badge .icon { filter:drop-shadow(0 0 4px rgba(255,255,255,0.3)); }
   .stat.emphasis { background:linear-gradient(155deg, rgba(120,156,255,0.22), rgba(120,156,255,0.07)); box-shadow:0 4px 14px -6px rgba(48,84,255,0.55), inset 0 0 0 1px rgba(255,255,255,0.08); }
-  .stat-label { font-size:9px; text-transform:uppercase; letter-spacing:.8px; color:#b2b7c0; font-weight:600; }
-  .stat-val { display:block; font-size:16px; font-weight:700; margin-top:0; font-variant-numeric: tabular-nums; line-height:1.05; }
+  .stat-label { font-size:9px; text-transform:uppercase; letter-spacing:.75px; color:#b2b7c0; font-weight:600; }
+  .stat-val { display:block; font-size:16px; font-weight:700; margin-top:2px; font-variant-numeric: tabular-nums; line-height:1.05; }
     .stat.emphasis.pulse { animation:statPulse 0.65s ease; }
     @keyframes statPulse { 0%{ transform:scale(1); } 35%{ transform:scale(1.035); } 70%{ transform:scale(0.992); } 100%{ transform:scale(1); } }
   .progress-wrap { height:5px; margin-top:6px; border-radius:3px; background:rgba(255,255,255,0.10); overflow:hidden; position:relative; box-shadow:inset 0 0 0 1px rgba(0,0,0,0.35); }
@@ -64,14 +70,16 @@
           <img id="gameLogo" alt="Tetris Logo" decoding="async" />
         </div>
         <div class="stats">
-          <div id="score" class="stat emphasis">
+          <div id="score" class="stat score-primary emphasis">
             <div class="stat-top"><span class="stat-label">Score</span><span class="delta" id="scoreDelta"></span></div>
             <span id="scoreVal" class="stat-val">0</span>
             <div class="progress-wrap"><div id="levelProgress" class="progress-bar"></div></div>
+            <div class="high-badge" title="High Score"><span class="icon">⭐</span><span id="highVal">0</span></div>
           </div>
-          <div id="level" class="stat"><span class="stat-label">Level</span><span id="levelVal" class="stat-val">1</span></div>
-            <div id="lines" class="stat"><span class="stat-label">Lines</span><span id="linesVal" class="stat-val">0</span></div>
-          <div id="highScore" class="stat"><span class="stat-label">High</span><span id="highVal" class="stat-val">0</span></div>
+          <div class="mini-stats">
+            <div id="lines" class="stat mini"><span class="stat-label">Lines</span><span id="linesVal" class="stat-val">0</span></div>
+            <div id="level" class="stat mini"><span class="stat-label">Level</span><span id="levelVal" class="stat-val">1</span></div>
+          </div>
         </div>
         <div id="toastLayer" class="toast-layer"></div>
         <div class="panel-bottom">
