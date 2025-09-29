@@ -152,40 +152,52 @@ export function darken(hex: string, pct: number) {
  */
 // Single beveled modern draw
 function drawCell(ctx:CanvasRenderingContext2D, x:number, y:number, size:number, style:PieceStyle) {
-  const s = size; const bx = x; const by = y;
-  // Base fill
-  ctx.fillStyle = style.base;
+  const s = size; const bx = x; const by = y; const base = style.base;
+  // 1. Base fill slightly adjusted
+  ctx.fillStyle = darken(base, 4);
   ctx.fillRect(bx, by, s, s);
-  const bevel = Math.max(2, Math.round(s*0.18));
-  // Highlight (top-left) polygon using a lighter tint (no pure white)
+  // 2. Dark core (inverse of old glossy highlight) – subtle radial inward darkening
+  const cx = bx + s/2, cy = by + s/2; const coreR = s*0.75;
+  const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
+  rg.addColorStop(0, hexToRgba(darken(base, 25), 0.85));
+  rg.addColorStop(0.55, hexToRgba(darken(base, 18), 0.55));
+  rg.addColorStop(1, hexToRgba(base, 0));
+  ctx.fillStyle = rg; ctx.fillRect(bx, by, s, s);
+  // 3. Edge bevels (directional) using only tinted variations (no white)
+  const bev = Math.max(2, Math.round(s*0.18));
+  // Top-left lighter wedge
   ctx.beginPath();
   ctx.moveTo(bx, by);
   ctx.lineTo(bx + s, by);
-  ctx.lineTo(bx + s - bevel, by + bevel);
-  ctx.lineTo(bx + bevel, by + bevel);
+  ctx.lineTo(bx + s - bev, by + bev);
+  ctx.lineTo(bx + bev, by + bev);
   ctx.lineTo(bx, by + s);
   ctx.closePath();
-  ctx.fillStyle = hexToRgba(lighten(style.base, 22), 0.55);
+  ctx.fillStyle = hexToRgba(lighten(base, 14), 0.35);
   ctx.fill();
-  // Shadow (bottom-right) polygon
+  // Bottom-right darker wedge
   ctx.beginPath();
   ctx.moveTo(bx + s, by);
   ctx.lineTo(bx + s, by + s);
   ctx.lineTo(bx, by + s);
-  ctx.lineTo(bx + bevel, by + s - bevel);
-  ctx.lineTo(bx + s - bevel, by + s - bevel);
-  ctx.lineTo(bx + s - bevel, by + bevel);
+  ctx.lineTo(bx + bev, by + s - bev);
+  ctx.lineTo(bx + s - bev, by + s - bev);
+  ctx.lineTo(bx + s - bev, by + bev);
   ctx.closePath();
-  ctx.fillStyle = hexToRgba(darken(style.base, 28), 0.55);
+  ctx.fillStyle = hexToRgba(darken(base, 32), 0.55);
   ctx.fill();
-  // Outer border
-  ctx.strokeStyle = darken(style.base, 32);
+  // 4. Razor outer frame
+  ctx.strokeStyle = darken(base, 40);
   ctx.lineWidth = 1;
   ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
-  // Inner inset line for crispness
-  const inset = Math.max(1, Math.round(s*0.30));
-  ctx.strokeStyle = hexToRgba(lighten(style.base, 10), 0.9);
+  // 5. Inner luminous rim (gives machined feel)
+  const inset = Math.max(1, Math.round(s*0.26));
+  ctx.strokeStyle = hexToRgba(lighten(base, 10), 0.75);
   ctx.strokeRect(bx + inset + 0.5, by + inset + 0.5, s - 2*inset - 1, s - 2*inset - 1);
+  // 6. Micro shadow along bottom-right to "lift" piece
+  ctx.fillStyle = hexToRgba(darken(base, 45), 0.35);
+  ctx.fillRect(bx + 1, by + s - 2, s - 2, 1);
+  ctx.fillRect(bx + s - 2, by + 1, 1, s - 2);
 }
 
 /** Convert #rrggbb to rgba(...) string with alpha */
@@ -252,6 +264,8 @@ export class TetrisGame {
   private rowPuffs: { x:number; y:number; life:number; ttl:number; r:number; maxR:number; color:string; }[] = [];
   // Interpolation progress for smoother falling render (0..1 each gravity step)
   private fallProgress = 0;
+  private softDropHeld = false;
+  private softDropRepeatAccum = 0;
   // single style palette
 
   constructor(private options: TetrisGameOptions) {
@@ -281,10 +295,16 @@ export class TetrisGame {
         case 'ArrowLeft': this.move(-1); break;
         case 'ArrowRight': this.move(1); break;
         case 'ArrowUp': this.rotate(); break;
-        case 'ArrowDown': this.softDrop(); break;
+        case 'ArrowDown':
+          if (!this.softDropHeld) { this.softDropHeld = true; this.softDrop(); }
+          e.preventDefault();
+          break;
         case 'Shift': this.hardDrop(); break;
         case 'c': case 'C': this.hold(); break;
       }
+    });
+    document.addEventListener('keyup', (e) => {
+      if (e.key === 'ArrowDown') this.softDropHeld = false;
     });
   }
 
@@ -623,6 +643,23 @@ export class TetrisGame {
     this.updateLightning(delta);
     this.updateShockwaves(delta);
     this.updateRowPuffs(delta);
+    // Continuous soft drop handling (every 50ms while held)
+    if (this.softDropHeld && this.current) {
+      this.softDropRepeatAccum += delta;
+      const interval = 50; // ms per accelerated step
+      while (this.softDropRepeatAccum >= interval) {
+        this.softDropRepeatAccum -= interval;
+        if (!this.stepDown()) { this.lockPiece(); break; }
+        else {
+          this.stats.score += 1;
+          this.updateStats();
+          this.dropAccumulator = 0; // reset gravity interpolation
+          this.fallProgress = 0;
+        }
+      }
+    } else {
+      this.softDropRepeatAccum = 0;
+    }
     if (this.shakeTime > 0) this.shakeTime = Math.max(0, this.shakeTime - delta);
     // Compute fall interpolation progress (0..1) if current piece can still move
     if (this.current && this.dropInterval > 0) {
