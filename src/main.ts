@@ -58,14 +58,13 @@ function boot() {
     if (!capHighBadge) {
       capHighBadge = document.createElement('div');
       capHighBadge.className = 'cap-high-score-badge';
-      capHighBadge.innerHTML = `\n        <div class="cap-hs-inner">\n          <img src="/public/cap-badge.png" alt="CAP High Score" decoding="async"/>\n          <div class="cap-hs-text">NEW CAP HIGH SCORE</div>\n        </div>`;
+      capHighBadge.innerHTML = `\n        <div class="cap-hs-inner">\n          <img src="/public/cap-badge.png" alt="New CAP High Score" decoding="async"/>\n        </div>`;
       document.body.appendChild(capHighBadge);
       requestAnimationFrame(()=> capHighBadge?.classList.add('visible'));
     } else {
       capHighBadge.classList.add('visible');
     }
-    // Auto hide after 4.5s
-    setTimeout(()=> capHighBadge?.classList.remove('visible'), 4500);
+    // Persistent: no auto-hide. Could add manual dismissal later if desired.
   }
   const game = new TetrisGame({
     width: 10,
