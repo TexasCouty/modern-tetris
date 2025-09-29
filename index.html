@@ -291,12 +291,12 @@
   /* Add rivets to panel buttons to match stat panels */
   .panel-btn { background:
     /* rivets */
-    radial-gradient(circle at 8px 8px, rgba(165,185,205,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) 8px, rgba(165,185,205,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at 8px calc(100% - 8px), rgba(165,185,205,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(165,185,205,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    /* brushed streaks */
-    repeating-linear-gradient(135deg, rgba(255,255,255,0.07) 0 2px, rgba(255,255,255,0) 2px 7px),
+    radial-gradient(circle at 8px 8px, rgba(190,210,225,0.65) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) 8px, rgba(190,210,225,0.65) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at 8px calc(100% - 8px), rgba(190,210,225,0.65) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(190,210,225,0.65) 0 3px, rgba(0,0,0,0) 3px),
+    /* LIGHTENED streaks */
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.18) 0 2px, rgba(255,255,255,0) 2px 6px),
     var(--stat-metal-base);
   }
     .panel-btn:hover { box-shadow:
@@ -338,13 +338,15 @@
   #score .delta { position:absolute; right:10px; top:8px; }
   /* Lines & Level adopt same darker steel tone as panel buttons (remove extra blue wash) */
   .stat.mini.lines-card, .stat.mini.level-card { background:
-    radial-gradient(circle at 8px 8px, rgba(165,185,205,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) 8px, rgba(165,185,205,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at 8px calc(100% - 8px), rgba(165,185,205,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(165,185,205,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    /* unified diagonal streak intensity to match buttons */
-    repeating-linear-gradient(140deg, rgba(255,255,255,0.085) 0 2px, rgba(255,255,255,0) 2px 7px),
+    radial-gradient(circle at 8px 8px, rgba(190,210,225,0.65) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) 8px, rgba(190,210,225,0.65) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at 8px calc(100% - 8px), rgba(190,210,225,0.65) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(190,210,225,0.65) 0 3px, rgba(0,0,0,0) 3px),
+    /* LIGHTENED streaks (same recipe as buttons) */
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.18) 0 2px, rgba(255,255,255,0) 2px 6px),
     var(--stat-metal-base); }
+  /* Remove Lines & Level icons */
+  .lines-card .stat-label:before, .level-card .stat-label:before { display:none !important; content:none !important; }
   /* Adjust padding to better center labels vertically */
   .stat.mini { padding-top:8px; }
   #score.stat { padding-top:12px; }
