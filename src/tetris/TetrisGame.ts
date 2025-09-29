@@ -7,6 +7,7 @@ export interface TetrisGameOptions {
   nextCanvas?: HTMLCanvasElement; // optional (preview disabled if absent)
   onStats?: (stats: TetrisStats) => void;
   onGameOver?: () => void;
+  onHighScore?: (value: number) => void;
   /** Optional RNG injection for deterministic tests */
   rng?: () => number;
   /** If true, skips real canvas context acquisition & rendering */
@@ -422,6 +423,7 @@ export class TetrisGame {
     if (this.stats.score > this.highScore) {
       this.highScore = this.stats.score;
       try { localStorage.setItem(HIGH_KEY, String(this.highScore)); } catch {}
+      this.options.onHighScore?.(this.highScore);
     }
     this.options.onGameOver?.();
   }

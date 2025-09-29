@@ -50,6 +50,7 @@ function boot() {
   const scoreCard = document.getElementById('score');
   const linesCard = document.getElementById('lines');
 
+  const highBadge = document.querySelector('.high-badge');
   const game = new TetrisGame({
     width: 10,
     height: 20,
@@ -89,6 +90,14 @@ function boot() {
       overlay.classList.add('visible');
       gameOverFlag = true;
       if (location.search.includes('debug=1')) console.debug('[tetris] game over');
+    }
+    ,onHighScore: (val:number) => {
+      if (highEl) highEl.textContent = nf.format(val);
+      if (highBadge) {
+        highBadge.classList.remove('badge-pop');
+        void (highBadge as HTMLElement).offsetWidth;
+        highBadge.classList.add('badge-pop');
+      }
     }
   });
 
