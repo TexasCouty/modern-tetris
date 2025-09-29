@@ -1,44 +1,56 @@
 // UI enhancement and utility scripts extracted from inline HTML to avoid HTML parser issues.
 
 (() => {
-  // Scoreboard enhancements
+  // Scoreboard enhancements + Message Board (Step 2)
   const nf = new Intl.NumberFormat('en-US');
-  const scoreEl = document.getElementById('scoreVal');
-  const levelEl = document.getElementById('levelVal');
-  const linesEl = document.getElementById('linesVal');
-  const highVal = document.getElementById('highVal');
   const scoreStat = document.getElementById('score');
-  const levelProgress = document.getElementById('levelProgress');
   const scoreDelta = document.getElementById('scoreDelta');
-  const toastLayer = document.getElementById('toastLayer');
+  const board = document.getElementById('messageBoard');
+  if(!board) return;
+  interface MBItem { text: string; tier: 'line'|'double'|'triple'|'tetris'|'level'; bonus?: number; ttl: number; }
+  const queue: MBItem[] = [];
+  let active: HTMLElement | null = null;
+  let showing = false;
   let lastScore = 0;
-  function showToast(text: string, opts: { type?: string; ttl?: number } = {}) {
-    if(!toastLayer) return; const div = document.createElement('div');
-    div.className = 'toast ' + (opts.type||''); div.textContent = text;
-    toastLayer.appendChild(div);
-    setTimeout(()=> div.classList.add('out'), opts.ttl || 1600);
-    setTimeout(()=> div.remove(), (opts.ttl||1600)+480);
+  function tierClass(t:MBItem['tier']){ return 'mb-'+t; }
+  function pushMessage(item: MBItem){
+    // Preempt logic: tetris & level override anything in queue (and current line/double/triple)
+    if(item.tier === 'tetris' || item.tier === 'level'){
+      if(active && !active.classList.contains('mb-tetris') && !active.classList.contains('mb-level')){
+        // force exit of current lower priority
+        active.classList.remove('enter'); active.classList.add('exit'); setTimeout(()=> active?.remove(), 160);
+        active = null; showing=false;
+      }
+      // Remove queued low-priority items
+      for(let i=queue.length-1;i>=0;i--){ if(queue[i].tier==='line'||queue[i].tier==='double'||queue[i].tier==='triple') queue.splice(i,1); }
+    }
+    queue.push(item); drain();
+  }
+  function drain(){ if(!board) return; if(showing) return; const next = queue.shift(); if(!next) { board.classList.remove('active'); return; }
+  board.classList.add('active');
+    const el = document.createElement('div'); el.className = 'mb-msg '+ tierClass(next.tier) + ' enter';
+    el.textContent = next.text;
+    if(next.bonus){ const b = document.createElement('span'); b.className='mb-bonus'; b.textContent='+'+ nf.format(next.bonus); el.appendChild(b); }
+  board.appendChild(el); active = el; showing = true;
+    const ttl = next.ttl;
+    setTimeout(()=>{
+      if(!el.isConnected) return; el.classList.remove('enter'); el.classList.add('exit');
+      setTimeout(()=>{ if(el.isConnected) el.remove(); showing=false; drain(); }, 190);
+    }, ttl);
   }
   window.addEventListener('tetris-level-up', (e: any) => {
-    const { level } = e.detail;
-    showToast('LEVEL '+ level, { type:'good', ttl: 1700 });
-    scoreStat?.classList.add('pulse');
-    setTimeout(()=> scoreStat?.classList.remove('pulse'), 620);
+    const { level } = e.detail; pushMessage({ text:'LEVEL '+level, tier:'level', ttl:2000 });
+    scoreStat?.classList.add('pulse'); setTimeout(()=> scoreStat?.classList.remove('pulse'), 620);
   });
   window.addEventListener('tetris-line-clear', (e: any) => {
-    const { cleared, score } = e.detail;
-    if (cleared === 4) { showToast('TETRIS +' + nf.format(score - lastScore), { type:'good', ttl:1900 }); }
-    else if (cleared === 3) { showToast('TRIPLE', { type:'good', ttl:1400 }); }
-    else if (cleared === 2) { showToast('DOUBLE', { ttl:1200 }); }
-    else if (cleared === 1) { showToast('LINE', { ttl:1000 }); }
-    if (scoreDelta && score > lastScore) {
-      scoreDelta.textContent = '+' + nf.format(score - lastScore);
-      scoreDelta.classList.add('visible');
-      setTimeout(()=> scoreDelta.classList.remove('visible'), 1200);
-    }
+    const { cleared, score } = e.detail; const gained = score - lastScore;
+    if (cleared === 4) pushMessage({ text:'TETRIS', tier:'tetris', bonus:gained, ttl:2200 });
+    else if (cleared === 3) pushMessage({ text:'TRIPLE', tier:'triple', ttl:1600 });
+    else if (cleared === 2) pushMessage({ text:'DOUBLE', tier:'double', ttl:1400 });
+    else if (cleared === 1) pushMessage({ text:'LINE', tier:'line', ttl:1100 });
+    if (scoreDelta && gained>0) { scoreDelta.textContent='+'+ nf.format(gained); scoreDelta.classList.add('visible'); setTimeout(()=> scoreDelta.classList.remove('visible'), 1200); }
     lastScore = score;
   });
-  // Removed MutationObserver loop; main.ts now updates progress + formatting directly.
 })();
 
 (() => {

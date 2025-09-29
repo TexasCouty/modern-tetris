@@ -20,6 +20,8 @@ function boot() {
   if (initialized) return;
   initialized = true;
   if (location.search.includes('debug=1')) console.debug('[tetris] boot() running; readyState=', document.readyState);
+  // TEMP: Reset high score (requested). Remove or gate behind a query param when no longer needed.
+  try { localStorage.removeItem('tetris_high_score'); } catch {}
 
   const canvas = document.getElementById('game') as HTMLCanvasElement | null;
   const scoreEl = document.getElementById('scoreVal');
