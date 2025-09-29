@@ -255,7 +255,8 @@
       const params = new URLSearchParams(location.search);
       const paramLogo = params.get('logo');
   const globalLogo = (window && window.__TETRIS_LOGO_URL__) || undefined;
-      const fallbackSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" width="220" height="54" viewBox="0 0 220 54"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#4f7ff9"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><rect width="220" height="54" rx="10" fill="rgba(255,255,255,0.04)"/><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI,Inter,Arial,sans-serif" font-size="30" font-weight="600" fill="url(#g)">TETRIS</text></svg>`);
+  // Removed XML declaration to prevent parse5 HTML build error on Netlify ("unexpected-question-mark-instead-of-tag-name")
+  const fallbackSvg = 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="220" height="54" viewBox="0 0 220 54"><defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#4f7ff9"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient></defs><rect width="220" height="54" rx="10" fill="rgba(255,255,255,0.04)"/><text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="Segoe UI,Inter,Arial,sans-serif" font-size="30" font-weight="600" fill="url(#g)">TETRIS</text></svg>');
       const el = document.getElementById('gameLogo');
       if(!el) return;
       // New implicit fallback to /logo.png so you can just drop a file at public/logo.png
