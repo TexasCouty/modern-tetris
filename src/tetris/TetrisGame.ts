@@ -764,19 +764,62 @@ export class TetrisGame {
     const cw = this.canvas.width / this.width;
     const ch = this.canvas.height / this.height;
     this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+    if (!this.simpleMode) {
+      // Gradient steel background
+      const g = this.ctx.createLinearGradient(0,0,0,this.canvas.height);
+      g.addColorStop(0,'#161A2B');
+      g.addColorStop(1,'#0F1220');
+      this.ctx.fillStyle = g;
+      this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+      // Vignette overlay
+      const vg = this.ctx.createRadialGradient(this.canvas.width/2, this.canvas.height*0.45, 0, this.canvas.width/2, this.canvas.height*0.55, Math.max(this.canvas.width,this.canvas.height)*0.7);
+      vg.addColorStop(0,'rgba(0,0,0,0)');
+      vg.addColorStop(1,'rgba(0,0,0,0.5)');
+      this.ctx.fillStyle = vg;
+      this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+      // Grid lines
+      this.ctx.beginPath();
+      this.ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      this.ctx.lineWidth = 1;
+      // vertical
+      for (let x=0; x<=this.width; x++) {
+        const px = Math.round(x*cw)+0.5; // crisp line
+        this.ctx.moveTo(px,0);
+        this.ctx.lineTo(px,this.canvas.height);
+      }
+      // horizontal
+      for (let y=0; y<=this.height; y++) {
+        const py = Math.round(y*ch)+0.5;
+        this.ctx.moveTo(0,py);
+        this.ctx.lineTo(this.canvas.width,py);
+      }
+      this.ctx.stroke();
+      // Weld dots (small radial glows)
+      const dotR = Math.min(cw,ch)*0.12;
+      for (let y=0; y<=this.height; y++) {
+        for (let x=0; x<=this.width; x++) {
+          const cx = x*cw;
+            const cy = y*ch;
+          const rg = this.ctx.createRadialGradient(cx, cy, 0, cx, cy, dotR);
+          rg.addColorStop(0,'rgba(120,180,255,0.07)');
+          rg.addColorStop(1,'rgba(120,180,255,0)');
+          this.ctx.fillStyle = rg;
+          this.ctx.beginPath();
+          this.ctx.arc(cx, cy, dotR, 0, Math.PI*2);
+          this.ctx.fill();
+        }
+      }
+    }
+    // Draw pieces & placed blocks
     for (let r=0; r<this.height; r++) {
       for (let c=0; c<this.width; c++) {
         const cellVal = this.board[r][c];
-        if (cellVal) {
-          if (this.simpleMode) {
-            this.ctx.fillStyle = PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'].base;
-            this.ctx.fillRect(c*cw, r*ch, cw, ch);
-          } else {
-            drawCell(this.ctx, c*cw, r*ch, cw, PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
-          }
-        } else {
-          this.ctx.fillStyle = (r+c)%2===0 ? '#050505' : '#0a0a0a';
+        if (!cellVal) continue;
+        if (this.simpleMode) {
+          this.ctx.fillStyle = PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'].base;
           this.ctx.fillRect(c*cw, r*ch, cw, ch);
+        } else {
+          drawCell(this.ctx, c*cw, r*ch, cw, PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
         }
       }
     }
