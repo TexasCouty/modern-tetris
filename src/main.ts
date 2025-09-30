@@ -61,18 +61,8 @@ function boot() {
   const highBadge = document.querySelector('.high-badge');
   const scoreCardEl = document.getElementById('score');
   // Prepare CAP high score badge overlay (lazy create) - used only if we want mid-run indicator
-  let capHighBadge: HTMLDivElement | null = null;
-  function showCapHighBadge() {
-    if (!capHighBadge) {
-      capHighBadge = document.createElement('div');
-      capHighBadge.className = 'cap-high-score-badge';
-      capHighBadge.innerHTML = `\n        <div class="cap-hs-inner">\n          <img src="/cap-badge.png" alt="New CAP High Score" decoding="async"/>\n        </div>`;
-      document.body.appendChild(capHighBadge);
-      requestAnimationFrame(()=> capHighBadge?.classList.add('visible'));
-    } else {
-      capHighBadge.classList.add('visible');
-    }
-  }
+  let capHighBadge: HTMLDivElement | null = null; // (Removed floating mid-run high score badge to avoid duplicate logo display.)
+  function showCapHighBadge() { /* Removed floating badge logic */ }
   let newHighThisRun = false; // tracks if a new high score occurred this session
   const game = new TetrisGame({
     width: 10,
@@ -127,7 +117,7 @@ function boot() {
         highBadge.classList.add('badge-pop');
       }
       // Mid-run we only show small floating badge; final overlay appears on game over.
-      showCapHighBadge();
+      // Removed floating badge call – only mark flag for game-over overlay.
       newHighThisRun = true;
     }
   });
