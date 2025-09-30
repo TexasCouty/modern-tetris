@@ -30,7 +30,8 @@
   .logo-wrap { text-align:center; margin:0 0 4px; }
   .logo-wrap { width:100%; }
   /* Force CAP logo to be same width as score card (full width of stats column) */
-  .logo-wrap img { display:block; width:100% !important; height:auto; max-width:none; object-fit:contain; filter:drop-shadow(0 0 18px rgba(102,209,255,0.25)) drop-shadow(0 0 46px rgba(102,209,255,0.15)); transition:filter .4s ease; }
+  /* Added max-height to shrink logo so right panel bottom aligns with game board bottom */
+  .logo-wrap img { display:block; width:100% !important; height:auto; max-width:none; max-height:240px; object-fit:contain; filter:drop-shadow(0 0 18px rgba(102,209,255,0.25)) drop-shadow(0 0 46px rgba(102,209,255,0.15)); transition:filter .4s ease; }
   .stats { display:flex; flex-direction:column; gap:8px; }
   .stat { background:linear-gradient(152deg, rgba(255,255,255,0.052), rgba(255,255,255,0.018)); padding:6px 8px 6px; border-radius:10px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.045),0 1.5px 3.5px -2px rgba(0,0,0,0.55); display:flex; flex-direction:column; justify-content:flex-start; min-height:48px; }
   .score-primary { min-height:76px; padding:9px 12px 10px; border:1px solid rgba(120,156,255,0.35); box-shadow:0 4px 14px -6px rgba(48,84,255,0.55),0 0 0 1px rgba(255,255,255,0.10) inset,0 0 0 1px rgba(120,156,255,0.25); background:linear-gradient(155deg, rgba(120,156,255,0.28), rgba(120,156,255,0.08)); }
