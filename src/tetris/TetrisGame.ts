@@ -157,49 +157,83 @@ export function darken(hex: string, pct: number) {
  * Uses the passed PieceStyle for consistent, “forged” depth.
  */
 // Single beveled modern draw
-function drawCell(ctx:CanvasRenderingContext2D, x:number, y:number, size:number, style:PieceStyle) {
+function drawCell(ctx:CanvasRenderingContext2D, x:number, y:number, size:number, style:PieceStyle, opts?:{ pulse?: number; sweepPhase?:number; variation?: number; }) {
   const s = size; const bx = x; const by = y; const base = style.base;
+  const variation = opts?.variation ?? 0; // -0.5..0.5
+  const pulseT = opts?.pulse ?? 0; // 0..1 (recent lock pulse)
+  const sweep = opts?.sweepPhase ?? 0; // 0..1 global light sweep position
+  // Adjust base lightness very slightly per cell for texture variety
+  const baseAdj = variation * 6; // +/- 6% perceived
+  const baseColor = baseAdj > 0 ? lighten(base, baseAdj) : darken(base, -baseAdj);
   // Metallic gradient body (vertical dark->mid->light->dark)
   const lg = ctx.createLinearGradient(bx, by, bx, by + s);
-  lg.addColorStop(0, darken(base, 28));
-  lg.addColorStop(0.18, darken(base, 14));
-  lg.addColorStop(0.5, base);
-  lg.addColorStop(0.82, darken(base, 16));
-  lg.addColorStop(1, darken(base, 32));
+  lg.addColorStop(0, darken(baseColor, 28));
+  lg.addColorStop(0.18, darken(baseColor, 14));
+  lg.addColorStop(0.5, baseColor);
+  lg.addColorStop(0.82, darken(baseColor, 16));
+  lg.addColorStop(1, darken(baseColor, 32));
   ctx.fillStyle = lg; ctx.fillRect(bx, by, s, s);
-  // Brushed texture (fine diagonal lines)
+  // Brushed texture with slight randomized angle offset
   const stride = Math.max(4, Math.round(s/5));
+  const angleOffset = variation * 0.35; // radians small tilt
   ctx.save();
   ctx.beginPath(); ctx.rect(bx, by, s, s); ctx.clip();
-  ctx.globalAlpha = 0.07; ctx.strokeStyle = hexToRgba('#ffffff', 0.28); ctx.lineWidth = 1;
-  for(let i=-s;i<s*2;i+=stride){ ctx.beginPath(); ctx.moveTo(bx + i, by); ctx.lineTo(bx + i - s, by + s); ctx.stroke(); }
+  ctx.globalAlpha = 0.07 + (variation*0.03);
+  ctx.strokeStyle = hexToRgba('#ffffff', 0.26 + variation*0.05);
+  ctx.lineWidth = 1;
+  // Precompute sin/cos for variation angle
+  const ang = Math.PI/4 + angleOffset; // around 45deg
+  const dx = Math.cos(ang); const dy = Math.sin(ang);
+  for(let i=-s;i<s*2;i+=stride){
+    ctx.beginPath();
+    ctx.moveTo(bx + i*dx, by + i*dy);
+    ctx.lineTo(bx + (i - s)*dx - s*dy*0.2, by + (i - s)*dy + s*dx*0.2);
+    ctx.stroke();
+  }
   ctx.restore();
   // Bevel edges
   const bev = Math.max(2, Math.round(s*0.16));
   const tl = ctx.createLinearGradient(bx, by, bx + bev, by + bev);
-  tl.addColorStop(0, hexToRgba(lighten(base, 30), 0.55));
-  tl.addColorStop(1, hexToRgba(lighten(base, 6), 0));
-  ctx.fillStyle = tl; ctx.fillRect(bx, by, bev, bev); // corner glow
+  tl.addColorStop(0, hexToRgba(lighten(baseColor, 30), 0.55 + pulseT*0.3));
+  tl.addColorStop(1, hexToRgba(lighten(baseColor, 6), 0));
+  ctx.fillStyle = tl; ctx.fillRect(bx, by, bev, bev);
   // Bottom/right shadow bevel
   const br = ctx.createLinearGradient(bx + s - bev, by + s - bev, bx + s, by + s);
-  br.addColorStop(0, hexToRgba(darken(base, 18), 0));
-  br.addColorStop(1, hexToRgba(darken(base, 45), 0.55));
+  br.addColorStop(0, hexToRgba(darken(baseColor, 18), 0));
+  br.addColorStop(1, hexToRgba(darken(baseColor, 45), 0.55 + pulseT*0.25));
   ctx.fillStyle = br; ctx.fillRect(bx + s - bev, by + s - bev, bev, bev);
   // Inner seam glow (thin inset)
   const inset = Math.max(1, Math.round(s*0.22));
-  ctx.strokeStyle = hexToRgba(style.seam || lighten(base,15), 0.9);
+  const seamPulse = 0.9 + pulseT*0.6;
+  ctx.strokeStyle = hexToRgba(style.seam || lighten(baseColor,15), seamPulse);
   ctx.lineWidth = 1;
   ctx.strokeRect(bx + inset + 0.5, by + inset + 0.5, s - 2*inset - 1, s - 2*inset - 1);
   // Outer dark frame
-  ctx.strokeStyle = hexToRgba(style.edge, 0.85);
+  ctx.strokeStyle = hexToRgba(style.edge, 0.85 + pulseT*0.1);
   ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
-  // Specular diagonal streak
+  // Specular diagonal streak with global sweep additive highlight
   const spec = ctx.createLinearGradient(bx, by, bx + s, by + s);
   spec.addColorStop(0.15, hexToRgba('#ffffff', 0));
-  spec.addColorStop(0.5, hexToRgba(style.gloss, 0.32));
+  spec.addColorStop(0.5, hexToRgba(style.gloss, 0.32 + pulseT*0.25));
   spec.addColorStop(0.58, hexToRgba('#ffffff', 0.0));
   ctx.fillStyle = spec; ctx.fillRect(bx, by, s, s);
-  // Lift shadow (bottom/right)
+  // Global lighting sweep: narrow vertical band moves across board; apply soft additive overlay
+  if (sweep > 0) {
+    const center = sweep; // normalized 0..1 column center
+    // normalized distance of this cell center's x (we'll pass actual board width externally)
+    // expects ctx global composite to default normal
+    const cellCenterNorm = (bx + s/2) / ctx.canvas.width; // 0..1
+    const dist = Math.abs(cellCenterNorm - center);
+    const band = Math.max(0, 1 - (dist*18)); // width falloff
+    if (band > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.fillStyle = hexToRgba('#9fdcff', 0.08 * band);
+      ctx.fillRect(bx, by, s, s);
+      ctx.restore();
+    }
+  }
+  // Lift shadow
   ctx.fillStyle = hexToRgba('#000000', 0.35);
   ctx.fillRect(bx + 1, by + s - 2, s - 2, 1);
   ctx.fillRect(bx + s - 2, by + 1, 1, s - 2);
@@ -277,12 +311,18 @@ export class TetrisGame {
   private rng: () => number;
   private headless = false;
   private simpleMode = false; // disables beveled draw for debug
+  // Metadata for each settled cell (lock pulse + variation seed)
+  private cellMeta: { lockedAt: number; variation: number; }[][] = [];
+  // Global lighting sweep state
+  private sweepStart = performance.now();
+  private sweepDuration = 5200; // ms per full horizontal sweep
   // single style palette
 
   constructor(private options: TetrisGameOptions) {
     this.width = options.width;
     this.height = options.height;
-    this.board = Array.from({ length: this.height }, () => Array(this.width).fill(null));
+  this.board = Array.from({ length: this.height }, () => Array(this.width).fill(null));
+  this.cellMeta = Array.from({ length: this.height }, () => Array.from({ length: this.width }, () => ({ lockedAt: -1, variation: 0 })));
     this.canvas = options.canvas;
     // Assign RNG immediately so refillQueue can use it
     this.rng = options.rng ?? Math.random;
@@ -502,12 +542,18 @@ export class TetrisGame {
   private lockPiece() {
     if (!this.current) return;
     const { shape, x, y, type } = this.current;
+    // Register a lock pulse timestamp for each occupied cell so we can animate a quick glow burst.
+    const now = performance.now();
     for (let r = 0; r < shape.length; r++) {
       for (let c = 0; c < shape[r].length; c++) {
         if (shape[r][c]) {
           const br = y + r;
             const bc = x + c;
-          if (br >= 0) this.board[br][bc] = type;
+          if (br >= 0) {
+            this.board[br][bc] = type;
+            // Store lock time & random variation seed
+            this.cellMeta[br][bc] = { lockedAt: now, variation: (this.rng()*1 - 0.5) };
+          }
         }
       }
     }
@@ -764,6 +810,9 @@ export class TetrisGame {
     const cw = this.canvas.width / this.width;
     const ch = this.canvas.height / this.height;
     this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+    const now = performance.now();
+    const sweepT = ((now - this.sweepStart) % this.sweepDuration) / this.sweepDuration;
+    const sweepPhase = 0.5 - 0.5*Math.cos(sweepT * Math.PI*2); // eased 0..1
     for (let r=0; r<this.height; r++) {
       for (let c=0; c<this.width; c++) {
         const cellVal = this.board[r][c];
@@ -772,7 +821,14 @@ export class TetrisGame {
             this.ctx.fillStyle = PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'].base;
             this.ctx.fillRect(c*cw, r*ch, cw, ch);
           } else {
-            drawCell(this.ctx, c*cw, r*ch, cw, PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
+            const meta = this.cellMeta[r][c];
+            const pulseAge = meta.lockedAt < 0 ? 0 : (now - meta.lockedAt);
+            const pulse = pulseAge < 160 ? 1 - (pulseAge / 160) : 0;
+            drawCell(this.ctx, c*cw, r*ch, cw, PIECE_STYLES[cellVal as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'], {
+              pulse,
+              variation: meta.variation,
+              sweepPhase
+            });
           }
         } else {
           this.ctx.fillStyle = (r+c)%2===0 ? '#050505' : '#0a0a0a';
@@ -791,7 +847,11 @@ export class TetrisGame {
               this.ctx.fillStyle = PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'].base;
               this.ctx.fillRect(px, py, cw, ch);
             } else {
-              drawCell(this.ctx, px, py, cw, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
+              drawCell(this.ctx, px, py, cw, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'], {
+                pulse: 0,
+                variation: ((r*7 + c*13) % 17)/17 - 0.5,
+                sweepPhase
+              });
             }
           }
         }
