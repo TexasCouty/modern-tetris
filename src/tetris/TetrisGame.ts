@@ -336,6 +336,7 @@ export class TetrisGame {
       const grad: any = { addColorStop: noop };
       const dummyCtx: Partial<CanvasRenderingContext2D> = {
         fillRect: noop, clearRect: noop, beginPath: noop, moveTo: noop, lineTo: noop, closePath: noop,
+        rect: noop, clip: noop,
         stroke: noop, strokeRect: noop, fill: noop, arc: noop, save: noop, restore: noop,
         translate: noop, createRadialGradient: () => grad, createLinearGradient: () => grad,
         fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1,
@@ -355,6 +356,7 @@ export class TetrisGame {
         const grad: any = { addColorStop: noop };
         const dummyCtx: Partial<CanvasRenderingContext2D> = {
           fillRect: noop, clearRect: noop, beginPath: noop, moveTo: noop, lineTo: noop, closePath: noop,
+          rect: noop, clip: noop,
           stroke: noop, strokeRect: noop, fill: noop, arc: noop, save: noop, restore: noop,
           translate: noop, createRadialGradient: () => grad, createLinearGradient: () => grad,
           fillStyle: '#000', strokeStyle: '#000', lineWidth: 1, globalAlpha: 1,
