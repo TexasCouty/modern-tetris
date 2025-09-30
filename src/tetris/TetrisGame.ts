@@ -71,6 +71,7 @@ export type PieceStyle = {
   shadow: string;    // dark edge/low side
   edge: string;      // rim line color (dark)
   gloss: string;     // gloss tint (for additive radial)
+  seam?: string;     // optional glowing seam accent color
 };
 
 /** Modernized-classic palette (cyan, yellow, purple, orange, blue, green, red)
@@ -78,13 +79,13 @@ export type PieceStyle = {
  */
 // Modern saturated palette with controlled shadows (earlier favored set)
 export const PIECE_STYLES: Record<'I'|'O'|'T'|'L'|'J'|'S'|'Z', PieceStyle> = {
-  I: { base:'#18D0E6', highlight:'#5FEFFF', mid:'#18B8D0', shadow:'#0F6B85', edge:'#0A3C4A', gloss:'#9FF7FF' },
-  O: { base:'#F7C62F', highlight:'#FFE45F', mid:'#DDAE20', shadow:'#8F6A10', edge:'#4A3905', gloss:'#FFF27A' },
-  T: { base:'#7040F2', highlight:'#9A70FF', mid:'#5A2DC0', shadow:'#351A75', edge:'#220E4D', gloss:'#B699FF' },
-  L: { base:'#F2922A', highlight:'#FFB366', mid:'#D6761C', shadow:'#8C4208', edge:'#4D2203', gloss:'#FFC48A' },
-  J: { base:'#2E6CF3', highlight:'#5D95FF', mid:'#2052C8', shadow:'#0E2F73', edge:'#081946', gloss:'#7FB1FF' },
-  S: { base:'#22B366', highlight:'#4DDB8B', mid:'#1C8F52', shadow:'#0B4D2C', edge:'#042618', gloss:'#6EFFAD' },
-  Z: { base:'#E23B33', highlight:'#FF726B', mid:'#B83028', shadow:'#6A1410', edge:'#350807', gloss:'#FF9892' },
+  I: { base:'#18D0E6', highlight:'#5FEFFF', mid:'#18B8D0', shadow:'#0F6B85', edge:'#0A3C4A', gloss:'#9FF7FF', seam:'#5FEFFF' },
+  O: { base:'#F7C62F', highlight:'#FFE45F', mid:'#DDAE20', shadow:'#8F6A10', edge:'#4A3905', gloss:'#FFF27A', seam:'#FFE45F' },
+  T: { base:'#7040F2', highlight:'#9A70FF', mid:'#5A2DC0', shadow:'#351A75', edge:'#220E4D', gloss:'#B699FF', seam:'#9A70FF' },
+  L: { base:'#F2922A', highlight:'#FFB366', mid:'#D6761C', shadow:'#8C4208', edge:'#4D2203', gloss:'#FFC48A', seam:'#FFB366' },
+  J: { base:'#2E6CF3', highlight:'#5D95FF', mid:'#2052C8', shadow:'#0E2F73', edge:'#081946', gloss:'#7FB1FF', seam:'#5D95FF' },
+  S: { base:'#22B366', highlight:'#4DDB8B', mid:'#1C8F52', shadow:'#0B4D2C', edge:'#042618', gloss:'#6EFFAD', seam:'#4DDB8B' },
+  Z: { base:'#E23B33', highlight:'#FF726B', mid:'#B83028', shadow:'#6A1410', edge:'#350807', gloss:'#FF9892', seam:'#FF726B' },
 };
 
 /** HSL helpers so shading looks natural across hues */
@@ -158,49 +159,48 @@ export function darken(hex: string, pct: number) {
 // Single beveled modern draw
 function drawCell(ctx:CanvasRenderingContext2D, x:number, y:number, size:number, style:PieceStyle) {
   const s = size; const bx = x; const by = y; const base = style.base;
-  // 1. Base fill slightly adjusted
-  ctx.fillStyle = darken(base, 4);
-  ctx.fillRect(bx, by, s, s);
-  // 2. Dark core (inverse of old glossy highlight) – subtle radial inward darkening
-  const cx = bx + s/2, cy = by + s/2; const coreR = s*0.75;
-  const rg = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR);
-  rg.addColorStop(0, hexToRgba(darken(base, 25), 0.85));
-  rg.addColorStop(0.55, hexToRgba(darken(base, 18), 0.55));
-  rg.addColorStop(1, hexToRgba(base, 0));
-  ctx.fillStyle = rg; ctx.fillRect(bx, by, s, s);
-  // 3. Edge bevels (directional) using only tinted variations (no white)
-  const bev = Math.max(2, Math.round(s*0.18));
-  // Top-left lighter wedge
-  ctx.beginPath();
-  ctx.moveTo(bx, by);
-  ctx.lineTo(bx + s, by);
-  ctx.lineTo(bx + s - bev, by + bev);
-  ctx.lineTo(bx + bev, by + bev);
-  ctx.lineTo(bx, by + s);
-  ctx.closePath();
-  ctx.fillStyle = hexToRgba(lighten(base, 14), 0.35);
-  ctx.fill();
-  // Bottom-right darker wedge
-  ctx.beginPath();
-  ctx.moveTo(bx + s, by);
-  ctx.lineTo(bx + s, by + s);
-  ctx.lineTo(bx, by + s);
-  ctx.lineTo(bx + bev, by + s - bev);
-  ctx.lineTo(bx + s - bev, by + s - bev);
-  ctx.lineTo(bx + s - bev, by + bev);
-  ctx.closePath();
-  ctx.fillStyle = hexToRgba(darken(base, 32), 0.55);
-  ctx.fill();
-  // 4. Razor outer frame
-  ctx.strokeStyle = darken(base, 40);
+  // Metallic gradient body (vertical dark->mid->light->dark)
+  const lg = ctx.createLinearGradient(bx, by, bx, by + s);
+  lg.addColorStop(0, darken(base, 28));
+  lg.addColorStop(0.18, darken(base, 14));
+  lg.addColorStop(0.5, base);
+  lg.addColorStop(0.82, darken(base, 16));
+  lg.addColorStop(1, darken(base, 32));
+  ctx.fillStyle = lg; ctx.fillRect(bx, by, s, s);
+  // Brushed texture (fine diagonal lines)
+  const stride = Math.max(4, Math.round(s/5));
+  ctx.save();
+  ctx.beginPath(); ctx.rect(bx, by, s, s); ctx.clip();
+  ctx.globalAlpha = 0.07; ctx.strokeStyle = hexToRgba('#ffffff', 0.28); ctx.lineWidth = 1;
+  for(let i=-s;i<s*2;i+=stride){ ctx.beginPath(); ctx.moveTo(bx + i, by); ctx.lineTo(bx + i - s, by + s); ctx.stroke(); }
+  ctx.restore();
+  // Bevel edges
+  const bev = Math.max(2, Math.round(s*0.16));
+  const tl = ctx.createLinearGradient(bx, by, bx + bev, by + bev);
+  tl.addColorStop(0, hexToRgba(lighten(base, 30), 0.55));
+  tl.addColorStop(1, hexToRgba(lighten(base, 6), 0));
+  ctx.fillStyle = tl; ctx.fillRect(bx, by, bev, bev); // corner glow
+  // Bottom/right shadow bevel
+  const br = ctx.createLinearGradient(bx + s - bev, by + s - bev, bx + s, by + s);
+  br.addColorStop(0, hexToRgba(darken(base, 18), 0));
+  br.addColorStop(1, hexToRgba(darken(base, 45), 0.55));
+  ctx.fillStyle = br; ctx.fillRect(bx + s - bev, by + s - bev, bev, bev);
+  // Inner seam glow (thin inset)
+  const inset = Math.max(1, Math.round(s*0.22));
+  ctx.strokeStyle = hexToRgba(style.seam || lighten(base,15), 0.9);
   ctx.lineWidth = 1;
-  ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
-  // 5. Inner luminous rim (gives machined feel)
-  const inset = Math.max(1, Math.round(s*0.26));
-  ctx.strokeStyle = hexToRgba(lighten(base, 10), 0.75);
   ctx.strokeRect(bx + inset + 0.5, by + inset + 0.5, s - 2*inset - 1, s - 2*inset - 1);
-  // 6. Micro shadow along bottom-right to "lift" piece
-  ctx.fillStyle = hexToRgba(darken(base, 45), 0.35);
+  // Outer dark frame
+  ctx.strokeStyle = hexToRgba(style.edge, 0.85);
+  ctx.strokeRect(bx + 0.5, by + 0.5, s - 1, s - 1);
+  // Specular diagonal streak
+  const spec = ctx.createLinearGradient(bx, by, bx + s, by + s);
+  spec.addColorStop(0.15, hexToRgba('#ffffff', 0));
+  spec.addColorStop(0.5, hexToRgba(style.gloss, 0.32));
+  spec.addColorStop(0.58, hexToRgba('#ffffff', 0.0));
+  ctx.fillStyle = spec; ctx.fillRect(bx, by, s, s);
+  // Lift shadow (bottom/right)
+  ctx.fillStyle = hexToRgba('#000000', 0.35);
   ctx.fillRect(bx + 1, by + s - 2, s - 2, 1);
   ctx.fillRect(bx + s - 2, by + 1, 1, s - 2);
 }
