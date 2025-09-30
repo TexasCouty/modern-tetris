@@ -10,15 +10,18 @@
     "preview": "vite preview",
     "electron": "electron .",
     "desktop": "vite build && electron .",
-    "electron:dev": "node scripts/dev-electron.cjs"
+    "electron:dev": "node scripts/dev-electron.cjs",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/jsdom": "^21.1.7",
     "concurrently": "^8.2.2",
     "cross-env": "^7.0.3",
     "electron": "^31.0.0",
     "typescript": "^5.4.0",
     "vite": "^5.0.0",
+    "vitest": "^3.2.4",
     "wait-on": "^7.2.0"
   }
 }
