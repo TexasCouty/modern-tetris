@@ -63,7 +63,8 @@ function boot() {
   // Prepare CAP high score badge overlay (lazy create) - used only if we want mid-run indicator
   let capHighBadge: HTMLDivElement | null = null; // (Removed floating mid-run high score badge to avoid duplicate logo display.)
   function showCapHighBadge() { /* Removed floating badge logic */ }
-  let newHighThisRun = false; // tracks if a new high score occurred this session
+  let newHighThisRun = false; // true only if current run beat the baseline high score
+  let lastHighScoreBeforeRun = 0; // snapshot of high score at the moment a run begins
   const game = new TetrisGame({
     width: 10,
     height: 20,
@@ -118,7 +119,8 @@ function boot() {
       }
       // Mid-run we only show small floating badge; final overlay appears on game over.
       // Removed floating badge call – only mark flag for game-over overlay.
-      newHighThisRun = true;
+      // Only mark new high for this run if the updated high score exceeds the baseline snapshot.
+      newHighThisRun = val > lastHighScoreBeforeRun;
     }
   });
 
@@ -128,7 +130,7 @@ function boot() {
 
   startBtn.textContent = 'Start';
   // Initialize high score display immediately (persists unless reset param used)
-  try { highEl.textContent = nf.format(game.getHighScore()); } catch {}
+  try { const hs = game.getHighScore(); highEl.textContent = nf.format(hs); lastHighScoreBeforeRun = hs; } catch {}
 
   // After guard above, these elements are guaranteed non-null; assert for TS
   const _startBtn = startBtn!;
@@ -156,6 +158,9 @@ function boot() {
         setTimeout(()=>{
           _overlay.classList.remove('visible','counting');
           _overlay.innerHTML='';
+          // New run starting after countdown finishes -> reset baseline + flag
+          lastHighScoreBeforeRun = game.getHighScore();
+          newHighThisRun = false;
           _startBtn.textContent = 'Pause';
           _startBtn.classList.add('running');
           scoreCardEl?.classList.add('score-active');
@@ -176,7 +181,10 @@ function boot() {
         return;
       }
       _overlay.classList.remove('visible','ready-pulse');
-      _startBtn.textContent = 'Pause';
+  // Starting a fresh run from READY state (no countdown path)
+  lastHighScoreBeforeRun = game.getHighScore();
+  newHighThisRun = false;
+  _startBtn.textContent = 'Pause';
       _startBtn.classList.add('running');
       scoreCardEl?.classList.add('score-active');
       if (location.search.includes('debug=1')) console.debug('[tetris] starting / resuming game');
@@ -198,6 +206,9 @@ function boot() {
   }
 
   function restartGame() {
+    // Capture baseline before starting a brand new run
+    lastHighScoreBeforeRun = game.getHighScore();
+    newHighThisRun = false;
     game.reset(true); // full restart & auto-start
   _overlay.classList.remove('visible');
   _overlay.classList.remove('ready-pulse');
