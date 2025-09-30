@@ -22,7 +22,7 @@ function boot() {
   if (location.search.includes('debug=1')) console.debug('[tetris] boot() running; readyState=', document.readyState);
   // High score reset logic (user requested)
   const params = new URLSearchParams(location.search);
-  const forceResetHS = params.has('resetHS') || true; // 'true' keeps current behavior of always resetting; remove '|| true' later.
+  const forceResetHS = params.has('resetHS'); // reset only when explicit param provided
 
   const canvas = document.getElementById('game') as HTMLCanvasElement | null;
   const scoreEl = document.getElementById('scoreVal');
