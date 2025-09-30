@@ -25,27 +25,30 @@ We will proceed step-by-step. After completing each step, report back so we adva
 
 ---
 
-## Feature Snapshot
-* Canvas rendering with beveled gradient tiles
-* Line clear + Tetris explosion particles + bonus scoring
-* Soft / hard drop scoring
-* Level speed progression (every 10 lines)
-* High score persistence (localStorage)
-* Remote logo injection via `?logo=` or `VITE_LOGO_URL`
-* 7‑bag randomized piece sequence (fair distribution)
-* Event-driven UI updates (`tetris-line-clear`, `tetris-level-up`)
-* Minimalistic modern scoreboard with progress bar for next level
-* Toast notifications for line clears & level ups
-* Deterministic headless test mode (injectable RNG)
-* Mobile / touch-friendly on-screen controls (repeat fire for hold)
-* Production build hardened (removed problematic inline scripts)
+## Feature Snapshot (Current)
+* Metallic beveled tile rendering (multi-layer gradients, pulse & global lighting sweep)
+* Single-piece NEXT preview panel (uniform 4×3 virtual grid sizing + glow fade on update)
+* Cinematic game-over collapse (board squashes, sparks, mini lightning arcs)
+* Line clear & Tetris FX (row puffs, particles; Tetris gets bonus lightning & shockwave)
+* Soft & hard drop scoring (per-cell increments) + Tetris bonus
+* Level speed progression every 10 lines (gravity floor: 100ms)
+* High score persistence (localStorage) with guarded NEW HIGH SCORE overlay (only if record beaten)
+* Unified faint brushed streak system across all panels & buttons (root CSS vars `--streak-alpha`, `--streak-pattern`)
+* 7‑bag piece randomization (Fisher–Yates)
+* Event-driven UI updates (`tetris-line-clear`, `tetris-level-up`) + message board tiers
+* Modern scoreboard with progress bar & breathing glow while active
+* Toast + message board feedback system (Line / Double / Triple / TETRIS / Level Up)
+* Deterministic headless test mode (context stubs incl. `rect` + `clip` for Vitest stability)
+* Mobile / touch-friendly control cluster
+* Production build hardened (inline scripts removed; Netlify-friendly)
+* Optional Electron desktop wrapper using same dist build
 
 ---
 ## 2. Technology Stack & Architecture
 | Layer | Tech | Notes |
 |-------|------|-------|
 | Core Game Logic | TypeScript (module in `src/tetris/TetrisGame.ts`) | Pure logic + rendering separation opportunities. |
-| Renderer | HTML5 Canvas 2D | Single canvas for board; optional future next/hold canvases. |
+| Renderer | HTML5 Canvas 2D | Board canvas + dedicated NEXT preview canvas (single upcoming piece). |
 | Bundler / Dev Server | Vite | Fast HMR, ESM build, tree-shaking. |
 | Desktop Shell (optional) | Electron (main: `electron-main.cjs`) | Loads dev server or built `dist/index.html`. |
 | Test Runner | Vitest + jsdom/headless stubs | Logic-level deterministic tests. |
@@ -54,9 +57,9 @@ We will proceed step-by-step. After completing each step, report back so we adva
 Project Layout (key files):
 ```
 src/
-	main.ts               # DOM boot + game wiring (DOMContentLoaded guarded)
+	main.ts               # DOM boot + game wiring (passes nextCanvas, start/pause overlays)
 	uiEnhancements.ts     # Scoreboard formatting, toasts, logo recolor, mobile buttons
-	tetris/TetrisGame.ts  # Core engine, rendering, scoring, FX
+	tetris/TetrisGame.ts  # Core engine, rendering, scoring, FX, next preview logic & collapse
 electron-main.cjs       # Electron entry (prod/dev auto URL logic)
 scripts/dev-electron.cjs# Dynamic port finder + Vite + Electron spawn
 ```
@@ -78,11 +81,13 @@ Randomization uses a classic 7‑bag shuffle: each bag has the 7 distinct tetrom
 
 ---
 ## 4. Rendering & Visual Style
-Modern beveled “machined” tiles:
-* Per-piece palette with base / highlight / mid / shadow / edge / gloss shades.
-* Dual‑pass shading: dark core radial gradient + directional bevel wedges.
-* Board background uses alternating dark squares for subtle grid.
-* Special FX: localized row puffs & sparks on line clears (reduced from earlier heavy lightning for clarity & performance).
+Components:
+* Beveled metallic tiles (base/highlight/mid/shadow/edge/gloss) + per-cell variation seed
+* Global lighting sweep & per-cell lock pulse animation
+* Board background: alternating dark squares; optional white flash overlay for impact
+* NEXT preview: standardized 4×3 virtual grid for consistent piece scale; glow + radial aura on update
+* FX: row puffs, particles, Tetris lightning & shockwaves, collapse animation on game over
+* Unified brushed streaks: `--streak-pattern` used by stat cards, buttons, message board, preview
 
 ---
 ## 5. Input Model
@@ -143,7 +148,10 @@ Current tests (Vitest) cover:
 * Level progression after cumulative lines
 * Headless mode board operations
 
-Known Gap: No integration test ensures DOM boot and Start button functionality (a recent issue where initialization ran before DOM caused “dead” Start button). Future enhancement: add jsdom integration test to import `main.ts`, simulate `DOMContentLoaded`, click Start, and assert a piece spawns (`window.__GAME__._debugHasCurrent()` or canvas change).
+Known Gaps:
+* No integration test for DOM boot → start → piece spawn
+* NEXT preview visuals not snapshot-tested
+* Collapse FX rendering & timing not asserted in tests
 
 Planned additional tests:
 * Piece lock + spawn sequence invariants
@@ -238,17 +246,22 @@ Then open the page, click Start, play.
 | Date / Tag | Change |
 |------------|--------|
 | Initial | Core gameplay, bevel rendering |
-| Scoring Enhancements | Added soft/hard drop scoring, Tetris bonus |
+| Scoring Enhancements | Soft/hard drop scoring, Tetris bonus |
 | UI Modernization | Professional scoreboard, toasts, progress bar |
 | FX Simplification | Removed heavy lightning; localized row puffs |
 | Build Hardening | Removed inline scripts → external modules; fixed parse5 errors |
 | UI Layout Update | Uniform stat cards; centered control grid; larger logo |
+| Next Preview Added | Single-piece preview panel with glow & uniform sizing |
+| High Score Overlay Refine | Overlay only on actual record break |
+| Collapse FX | Cinematic board collapse on game over |
+| Unified Streak System | Global `--streak-alpha` & `--streak-pattern` applied to all panels |
 
 ---
 ## Known Gaps
-* No integration test for DOM boot (planned addition).
-* No persistent settings yet.
-* Accessibility (aria labels, focus ring) minimal.
+* No integration test for DOM boot / start / spawn yet
+* NEXT preview & collapse FX not covered by tests
+* No persistent settings (controls, themes)
+* Accessibility (aria labels, focus states) minimal
 
 ---
 Feel free to start a fresh chat referencing any section heading above for focused follow-up.
