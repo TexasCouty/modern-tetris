@@ -49,7 +49,8 @@ function boot() {
     return;
   }
 
-  const nextCanvas = undefined as any; // preview disabled
+  // Wire up the NEXT piece preview canvas (optional)
+  const nextCanvas = document.getElementById('nextCanvas') as HTMLCanvasElement | null;
   let gameOverFlag = false;
 
   const nf = new Intl.NumberFormat('en-US');
@@ -69,7 +70,8 @@ function boot() {
     width: 10,
     height: 20,
     canvas,
-    nextCanvas,
+    // Pass nextCanvas only if present so headless/tests unaffected
+    nextCanvas: nextCanvas ?? undefined,
     onStats: ({ score, level, lines }) => {
       // Debug stats logging (only if query contains debug)
       if (location.search.includes('debug=1')) {

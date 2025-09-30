@@ -283,6 +283,9 @@ export class TetrisGame {
   private ctx: CanvasRenderingContext2D;
   private nextCanvas?: HTMLCanvasElement;
   private nextCtx?: CanvasRenderingContext2D;
+  // For single-piece preview animation timing
+  private lastNextChange = 0; // timestamp of when upcoming piece changed
+  private nextPreviewType: string | null = null; // cached for glow animation (top of queue)
   private current: ActivePiece | null = null;
   private nextQueue: string[] = [];
   private dropInterval = 1000; // ms
@@ -460,6 +463,12 @@ export class TetrisGame {
     this.current = piece;
     this.holdUsedThisTurn = false;
     this.updateStats();
+    // Update preview animation state: next piece about to appear -> forthcoming preview becomes queue[0]
+    const upcoming = this.nextQueue[0] ?? null;
+    if (upcoming !== this.nextPreviewType) {
+      this.nextPreviewType = upcoming;
+      this.lastNextChange = performance.now();
+    }
     this.drawNext();
   }
 
@@ -810,6 +819,8 @@ export class TetrisGame {
       this.fallProgress = 0;
     }
     this.draw();
+    // Update next preview each frame for glow fade animation (cheap: tiny canvas)
+    if (this.nextCanvas && this.nextCtx) this.drawNext();
     requestAnimationFrame(this.loop);
   };
 
@@ -874,24 +885,57 @@ export class TetrisGame {
   }
 
   private drawNext() {
-  if (!this.nextCanvas || !this.nextCtx) return;
-  this.nextCtx.clearRect(0,0,this.nextCanvas.width,this.nextCanvas.height);
-    const show = this.nextQueue.slice(0,3);
-    show.forEach((type, idx) => {
-      const shape = TETROMINOES[type][0];
-      const size = 20;
-      const offsetY = idx * 40 + 10;
-      const offsetX = 10;
-      for (let r=0; r<shape.length; r++) {
-        for (let c=0; c<shape[r].length; c++) {
-          if (shape[r][c]) {
-            const x = offsetX + c*size;
-            const y = offsetY + r*size;
-            drawCell(this.nextCtx as CanvasRenderingContext2D, x, y, size, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z']);
-          }
-        }
+    if (!this.nextCanvas || !this.nextCtx) return;
+    this.nextCtx.clearRect(0,0,this.nextCanvas.width,this.nextCanvas.height);
+  const type = this.nextQueue[0];
+  if (!type) return;
+  const shape = TETROMINOES[type][0];
+  // STANDARDIZED RENDERING (REV 2): Use a fixed 4x3 virtual grid -> allows larger cells vertically (most pieces <=3 rows)
+  const cw = this.nextCanvas.width;
+  const ch = this.nextCanvas.height;
+  const pad = 8; // tighter outer padding to enlarge piece
+  const gridCols = 4;
+  const gridRows = 3; // vertical space target
+  const cellSize = Math.floor(Math.min((cw - pad) / gridCols, (ch - pad) / gridRows));
+  const gridW = cellSize * gridCols;
+  const gridH = cellSize * gridRows;
+  const gridX = Math.floor((cw - gridW) / 2);
+  const gridY = Math.floor((ch - gridH) / 2);
+  const blocksWide = shape[0].length;
+  const blocksHigh = shape.length;
+  const shapeOffsetX = Math.floor((gridCols - blocksWide) / 2) * cellSize;
+  const shapeOffsetY = Math.floor((gridRows - blocksHigh) / 2) * cellSize;
+  const startX = gridX + shapeOffsetX;
+  const startY = gridY + shapeOffsetY;
+  // Glow animation: fade in on change over 260ms
+    const now = performance.now();
+    const dt = now - this.lastNextChange;
+    let glow = 0;
+    if (dt < 260) glow = 1 - (dt/260); // 1 -> 0
+    // Draw each block (slightly dimmed baseline + pulse on change)
+    this.nextCtx.save();
+    this.nextCtx.globalAlpha = 0.85; // baseline fade so preview is less prominent than field pieces
+    for (let r=0; r<shape.length; r++) {
+      for (let c=0; c<shape[r].length; c++) {
+        if (!shape[r][c]) continue;
+        const x = startX + c*cellSize;
+        const y = startY + r*cellSize;
+        drawCell(this.nextCtx as CanvasRenderingContext2D, x, y, cellSize, PIECE_STYLES[type as 'I'|'O'|'T'|'L'|'J'|'S'|'Z'], { pulse: glow });
       }
-    });
+    }
+    this.nextCtx.restore();
+    // Soft aura only during glow window
+    if (glow > 0.01) {
+      this.nextCtx.save();
+      const maxSpan = Math.max(gridW, gridH);
+      const g = this.nextCtx.createRadialGradient(cw/2, ch/2, maxSpan*0.15, cw/2, ch/2, maxSpan*0.9);
+      g.addColorStop(0, `rgba(150,220,255,${0.18*glow})`);
+      g.addColorStop(1, 'rgba(150,220,255,0)');
+      this.nextCtx.globalCompositeOperation = 'screen';
+      this.nextCtx.fillStyle = g;
+      this.nextCtx.fillRect(0,0,cw,ch);
+      this.nextCtx.restore();
+    }
   }
 
   private drawParticles() {

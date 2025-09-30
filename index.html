@@ -16,6 +16,7 @@
     body { margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif; background: radial-gradient(circle at 30% 20%, #1f2535 0%, #0d1016 70%); color:#e5e7eb; -webkit-font-smoothing: antialiased; }
   #stage { padding:10px 12px; }
   .app-shell { display:flex; gap:18px; align-items:flex-start; justify-content:center; max-width:900px; margin:0 auto; }
+  .game-column { display:flex; flex-direction:column; }
     @media (max-width: 760px){ .app-shell { flex-direction:column; align-items:stretch; gap:20px; } #stage{ padding:12px 10px 40px; } }
     canvas { background:#06080d; display:block; image-rendering:pixelated; box-shadow:0 0 0 1px rgba(255,255,255,0.06),0 4px 16px -4px rgba(0,0,0,0.8); border-radius:6px; }
     @media (max-width: 380px) { canvas { width:240px; height:480px; } }
@@ -35,6 +36,25 @@
   .logo-wrap img { display:block; width:100% !important; height:auto; max-width:none; object-fit:contain; filter:drop-shadow(0 0 18px rgba(102,209,255,0.25)) drop-shadow(0 0 46px rgba(102,209,255,0.15)); transition:filter .4s ease; }
   .stats { display:flex; flex-direction:column; gap:8px; }
   .stat { background:linear-gradient(152deg, rgba(255,255,255,0.052), rgba(255,255,255,0.018)); padding:6px 8px 6px; border-radius:10px; position:relative; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.045),0 1.5px 3.5px -2px rgba(0,0,0,0.55); display:flex; flex-direction:column; justify-content:flex-start; min-height:48px; }
+  .next-panel { width:300px; }
+  #nextPanel { min-height:auto; }
+  #nextPanel canvas { background:
+      /* base metal gradient */
+      linear-gradient(145deg,#0d141b,#121b25),
+      var(--streak-pattern),
+      /* subtle grid lines */
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.018) 0 1px, rgba(255,255,255,0) 1px 16px),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, rgba(255,255,255,0) 1px 16px);
+    background-blend-mode:normal,overlay,overlay,overlay;
+    border-radius:6px; box-shadow:inset 0 0 0 1px rgba(255,255,255,0.05),0 0 0 1px rgba(60,90,120,0.18); position:relative; }
+  #nextPanel canvas::after { content:""; position:absolute; inset:0; pointer-events:none; border-radius:inherit; background:radial-gradient(circle at 50% 45%, rgba(120,156,255,0.08), rgba(120,156,255,0) 65%); mix-blend-mode:screen; }
+  .next-label { font-size:11px; letter-spacing:1.5px; font-weight:600; opacity:.8; }
+  .next-icon { font-size:11px; line-height:1; filter:drop-shadow(0 0 4px rgba(102,209,255,0.6)); opacity:.85; }
+  /* Sync seam glow subtle pulse with scoreboard (reuse keyframes if present) */
+  #nextPanel { animation: seamPulse 5s linear infinite; }
+  @keyframes seamPulse { 0%{ box-shadow:inset 0 0 0 1px rgba(255,255,255,0.05),0 0 0 1px rgba(60,90,120,0.18),0 0 6px -2px rgba(102,209,255,0.35); }
+    50%{ box-shadow:inset 0 0 0 1px rgba(255,255,255,0.07),0 0 0 1px rgba(60,90,120,0.25),0 0 12px -2px rgba(102,209,255,0.55); }
+    100%{ box-shadow:inset 0 0 0 1px rgba(255,255,255,0.05),0 0 0 1px rgba(60,90,120,0.18),0 0 6px -2px rgba(102,209,255,0.35); } }
   .score-primary { min-height:76px; padding:9px 12px 10px; border:1px solid rgba(120,156,255,0.35); box-shadow:0 4px 14px -6px rgba(48,84,255,0.55),0 0 0 1px rgba(255,255,255,0.10) inset,0 0 0 1px rgba(120,156,255,0.25); background:linear-gradient(155deg, rgba(120,156,255,0.28), rgba(120,156,255,0.08)); }
   .score-primary .stat-val { font-size:24px; }
   .mini-stats { display:grid; grid-template-columns:repeat(2,1fr); gap:6px; }
@@ -87,7 +107,9 @@
     /* --- STEP 2: SCOREBOARD STEEL PANEL BOX STYLING --- */
     :root {
       --stat-metal-base: linear-gradient(160deg,#1a232d 0%,#0e141b 60%,#0b1016 100%);
-      --stat-streaks: repeating-linear-gradient(135deg, rgba(255,255,255,0.08) 0 2px, rgba(255,255,255,0) 2px 7px);
+      --streak-alpha: 0.016; /* master subtle streak opacity */
+      --streak-pattern: repeating-linear-gradient(135deg, rgba(255,255,255,var(--streak-alpha)) 0 2px, rgba(255,255,255,0) 2px 7px);
+      --stat-streaks: var(--streak-pattern);
       --stat-sheen: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
       --stat-rivet: radial-gradient(circle at center, rgba(165,185,205,0.6) 0 55%, rgba(30,40,52,0.15) 60%, rgba(0,0,0,0) 70%);
       --stat-cyan: #66D1FF;
@@ -256,11 +278,11 @@
     .delta.visible { opacity:1; transform:translateY(0); }
   /* --- MESSAGE BOARD (Step 2) --- */
   .message-board { position:relative; min-height:54px; margin-top:2px; display:flex; align-items:center; justify-content:center; padding:8px 14px 10px; border-radius:10px; font-family:'Oxanium',system-ui,sans-serif; letter-spacing:1px; overflow:hidden; background:
-    radial-gradient(circle at 8px 8px, rgba(190,210,225,0.35) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) 8px, rgba(190,210,225,0.35) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at 8px calc(100% - 8px), rgba(190,210,225,0.35) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(190,210,225,0.35) 0 3px, rgba(0,0,0,0) 3px),
-    repeating-linear-gradient(135deg, rgba(255,255,255,0.03) 0 3px, rgba(255,255,255,0) 3px 9px),
+    radial-gradient(circle at 8px 8px, rgba(190,210,225,0.32) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) 8px, rgba(190,210,225,0.32) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at 8px calc(100% - 8px), rgba(190,210,225,0.32) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(190,210,225,0.32) 0 3px, rgba(0,0,0,0) 3px),
+    var(--streak-pattern),
     linear-gradient(155deg,#16202b,#111821 58%,#0c1218);
     box-shadow:inset 0 0 0 1px rgba(255,255,255,0.06), inset 0 1px 3px rgba(255,255,255,0.12), 0 3px 10px -4px rgba(0,0,0,0.8), 0 0 0 1px rgba(60,90,120,0.22);
   }
@@ -291,7 +313,7 @@
     @keyframes toastOut { 0%{ opacity:1; transform:translateY(0) scale(1);} 100%{ opacity:0; transform:translateY(-8px) scale(.93);} }
   .divider { height:1px; background:linear-gradient(90deg,rgba(255,255,255,0.14),rgba(255,255,255,0.02)); opacity:0.9; }
   button { cursor:pointer; outline:none; background:linear-gradient(150deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02)); color:#fff; border:1px solid rgba(255,255,255,0.14); border-radius:7px; font-size:11px; padding:5px 8px 6px; font-weight:600; letter-spacing:.35px; font-family:inherit; transition:background .15s, transform .13s, border-color .18s, box-shadow .25s; position:relative; }
-  .btn-primary { background:linear-gradient(140deg,#4f7ff9,#6f4ff9); border-color:#5a6ff5; box-shadow:0 4px 10px -4px rgba(80,120,255,0.55),0 0 0 1px rgba(255,255,255,0.08) inset; }
+  .btn-primary { background:linear-gradient(140deg,#4f7ff9,#6f4ff9); border-color:#5a6ff5; box-shadow:0 4px 10px -4px rgba(80,120,255,0.55),0 0 0 1px rgba(255,255,255,0.08) inset,0 0 0 1px rgba(120,156,255,0.25); }
   .btn-primary:hover { background:linear-gradient(140deg,#6b8ffb,#855cfb); }
   .btn-primary:active { transform:translateY(2px); }
   .btn-secondary { background:linear-gradient(150deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015)); border-color:rgba(255,255,255,0.14); opacity:0.85; }
@@ -314,7 +336,7 @@
     .panel-btn[data-variant="primary"] { color:#f5f9ff; }
   .panel-btn::before { content:""; position:absolute; inset:3px; border-radius:inherit; background:linear-gradient(90deg, rgba(102,209,255,0) 0%, rgba(102,209,255,0.55) 50%, rgba(102,209,255,0) 100%); opacity:.85; mix-blend-mode:screen; pointer-events:none; filter:drop-shadow(0 0 4px rgba(102,209,255,0.4)); }
     .panel-btn::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; background:
-        repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 2px, rgba(255,255,255,0) 2px 7px),
+        var(--streak-pattern),
         linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0) 40%),
         linear-gradient(325deg, rgba(0,0,0,0.55), rgba(0,0,0,0) 45%);
       mix-blend-mode:overlay; opacity:.9; transition:opacity .25s; }
@@ -326,12 +348,11 @@
         0 0 0 1px rgba(60,90,120,0.22); transition: box-shadow .28s, transform .18s, filter .25s; }
   /* Add rivets to panel buttons to match stat panels */
   .panel-btn { background:
-    radial-gradient(circle at 8px 8px, rgba(190,210,225,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) 8px, rgba(190,210,225,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at 8px calc(100% - 8px), rgba(190,210,225,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(190,210,225,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    /* Streaks nearly invisible now */
-    repeating-linear-gradient(135deg, rgba(255,255,255,0.015) 0 2px, rgba(255,255,255,0) 2px 7px),
+    radial-gradient(circle at 8px 8px, rgba(190,210,225,0.5) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) 8px, rgba(190,210,225,0.5) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at 8px calc(100% - 8px), rgba(190,210,225,0.5) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(190,210,225,0.5) 0 3px, rgba(0,0,0,0) 3px),
+    var(--streak-pattern),
     var(--stat-metal-base);
   }
   .panel-btn:hover { box-shadow:
@@ -378,10 +399,10 @@
   #score .delta { position:absolute; right:10px; top:8px; }
   /* Lines & Level adopt same darker steel tone as panel buttons (remove extra blue wash) */
   .stat.mini.lines-card, .stat.mini.level-card { background:
-    radial-gradient(circle at 8px 8px, rgba(190,210,225,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) 8px, rgba(190,210,225,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at 8px calc(100% - 8px), rgba(190,210,225,0.55) 0 3px, rgba(0,0,0,0) 3px),
-    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(190,210,225,0.55) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at 8px 8px, rgba(190,210,225,0.5) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) 8px, rgba(190,210,225,0.5) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at 8px calc(100% - 8px), rgba(190,210,225,0.5) 0 3px, rgba(0,0,0,0) 3px),
+    radial-gradient(circle at calc(100% - 8px) calc(100% - 8px), rgba(190,210,225,0.5) 0 3px, rgba(0,0,0,0) 3px),
     /* SOFT, BARELY VISIBLE streaks (match buttons) */
     repeating-linear-gradient(135deg, rgba(255,255,255,0.045) 0 2px, rgba(255,255,255,0) 2px 7px),
     var(--stat-metal-base); }
@@ -461,9 +482,17 @@
 <body>
   <div id="stage">
   <div id="root" class="app-shell">
+      <div class="game-column">
+        <div id="nextPanel" class="stat next-panel" style="margin-bottom:6px; padding:6px 10px 8px;">
+          <div class="stat-top next-head" style="margin-top:0; display:flex; align-items:center; gap:4px; justify-content:flex-start;">
+            <span class="stat-label next-label">NEXT</span>
+          </div>
+          <canvas id="nextCanvas" width="130" height="70" style="display:block; margin:4px auto 0; width:130px; height:70px;"></canvas>
+        </div>
       <div id="gameWrap" class="card-equal">
         <canvas id="game" width="300" height="600"></canvas>
         <div id="overlay" class="visible">READY</div>
+      </div>
       </div>
       <div class="panel">
         <div class="logo-wrap">
