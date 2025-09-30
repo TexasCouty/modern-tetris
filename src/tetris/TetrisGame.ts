@@ -316,6 +316,9 @@ export class TetrisGame {
   // Global lighting sweep state
   private sweepStart = performance.now();
   private sweepDuration = 5200; // ms per full horizontal sweep
+  // Game over collapse FX
+  private collapseStart = 0; // timestamp when game over initiated
+  private collapsing = false;
   // single style palette
 
   constructor(private options: TetrisGameOptions) {
@@ -465,6 +468,9 @@ export class TetrisGame {
       try { localStorage.setItem(HIGH_KEY, String(this.highScore)); } catch {}
       this.options.onHighScore?.(this.highScore);
     }
+    // Start collapse FX
+    this.collapseStart = performance.now();
+    this.collapsing = true;
     this.options.onGameOver?.();
   }
 
@@ -754,19 +760,25 @@ export class TetrisGame {
   private updateStats() { this.options.onStats?.(this.stats); }
 
   private loop = (time: number) => {
-    if (!this.running) return;
+    // Continue looping if game is running OR we are animating a collapse sequence.
+    if (!this.running && !this.collapsing) return;
     const delta = time - this.lastTime;
     this.lastTime = time;
-    this.dropAccumulator += delta;
-    if (this.dropAccumulator >= this.dropInterval) {
-      this.dropAccumulator = 0;
-      const moved = this.stepDown();
-      if (!moved) this.lockPiece();
+    if (this.running) {
+      this.dropAccumulator += delta;
+      if (this.dropAccumulator >= this.dropInterval) {
+        this.dropAccumulator = 0;
+        const moved = this.stepDown();
+        if (!moved) this.lockPiece();
+      }
+      this.updateParticles(delta);
+      this.updateLightning(delta);
+      this.updateShockwaves(delta);
+      this.updateRowPuffs(delta);
+    } else {
+      // During collapse we might still want residual FX updates (e.g., sparks if extended later)
+      // Currently minimal; placeholder for future particle decay.
     }
-    this.updateParticles(delta);
-    this.updateLightning(delta);
-    this.updateShockwaves(delta);
-    this.updateRowPuffs(delta);
     // Continuous soft drop handling (every 50ms while held)
     if (this.softDropHeld && this.current) {
       this.softDropRepeatAccum += delta;
@@ -974,6 +986,52 @@ export class TetrisGame {
       const remain = (this.flashUntil - performance.now())/220;
       this.ctx.fillStyle = `rgba(255,255,255,${0.55*remain})`;
       this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+    }
+    // Game over collapse FX: after game stops running, animate board compress + sparks/lightning
+    if (this.collapsing) {
+      const now = performance.now();
+      const elapsed = now - this.collapseStart;
+      const duration = 900; // ms
+      const t = Math.min(1, elapsed / duration);
+      // Scale board vertically toward center and darken
+      this.ctx.save();
+      this.ctx.translate(this.canvas.width/2, this.canvas.height/2);
+      const ease = 1 - Math.pow(1 - t, 3);
+      const scaleY = 1 - 0.85*ease;
+      const scaleX = 1 + 0.08*ease; // slight outward stretch
+      this.ctx.scale(scaleX, scaleY);
+      this.ctx.translate(-this.canvas.width/2, -this.canvas.height/2);
+      // Overlay dark veil
+      this.ctx.fillStyle = `rgba(0,0,0,${0.35*ease})`;
+      this.ctx.fillRect(0,0,this.canvas.width,this.canvas.height);
+      // Random spark particles (screen blend)
+      for (let i=0;i<10*(1-t);i++) {
+        const x = Math.random()*this.canvas.width;
+        const y = Math.random()*this.canvas.height;
+        const a = (1 - t) * (0.25 + Math.random()*0.4);
+        this.ctx.fillStyle = `rgba(150,200,255,${a})`;
+        this.ctx.fillRect(x, y, 2, 2);
+      }
+      // Occasional mini lightning bolt across width early in collapse
+      if (elapsed < 500) {
+        const bolts = 2;
+        for (let b=0;b<bolts;b++) {
+          this.ctx.beginPath();
+          const y0 = Math.random()*this.canvas.height;
+          this.ctx.moveTo(0, y0);
+          const segments = 6;
+            for (let s=1;s<=segments;s++) {
+              const x = (this.canvas.width/segments)*s;
+              const jitterY = y0 + (Math.random()*40 - 20)* (1 - t);
+              this.ctx.lineTo(x, jitterY);
+            }
+          this.ctx.strokeStyle = `rgba(180,220,255,${0.22*(1-t)})`;
+          this.ctx.lineWidth = 2;
+          this.ctx.stroke();
+        }
+      }
+      this.ctx.restore();
+      if (t >= 1) this.collapsing = false;
     }
   }
 
