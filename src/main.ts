@@ -60,20 +60,20 @@ function boot() {
 
   const highBadge = document.querySelector('.high-badge');
   const scoreCardEl = document.getElementById('score');
-  // Prepare CAP high score badge overlay (lazy create)
+  // Prepare CAP high score badge overlay (lazy create) - used only if we want mid-run indicator
   let capHighBadge: HTMLDivElement | null = null;
   function showCapHighBadge() {
     if (!capHighBadge) {
       capHighBadge = document.createElement('div');
       capHighBadge.className = 'cap-high-score-badge';
-      capHighBadge.innerHTML = `\n        <div class="cap-hs-inner">\n          <img src="/public/cap-badge.png" alt="New CAP High Score" decoding="async"/>\n        </div>`;
+      capHighBadge.innerHTML = `\n        <div class="cap-hs-inner">\n          <img src="/cap-badge.png" alt="New CAP High Score" decoding="async"/>\n        </div>`;
       document.body.appendChild(capHighBadge);
       requestAnimationFrame(()=> capHighBadge?.classList.add('visible'));
     } else {
       capHighBadge.classList.add('visible');
     }
-    // Persistent: no auto-hide. Could add manual dismissal later if desired.
   }
+  let newHighThisRun = false; // tracks if a new high score occurred this session
   const game = new TetrisGame({
     width: 10,
     height: 20,
@@ -109,10 +109,15 @@ function boot() {
     },
     onGameOver: () => {
       startBtn.textContent = 'Game Over - Restart (Space)';
-      overlay.textContent = 'GAME OVER';
-      overlay.classList.add('visible');
+      if (newHighThisRun) {
+        overlay.classList.add('visible');
+        overlay.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:18px;">\n          <img src="/cap-badge.png" alt="CAP High Score" style="width:180px;height:auto;filter:drop-shadow(0 0 22px rgba(120,196,255,0.9)) drop-shadow(0 0 54px rgba(102,209,255,0.55));"/>\n          <div style="font-size:50px;letter-spacing:3px;font-weight:800;background:linear-gradient(135deg,#c4e8ff,#67baff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 30px rgba(120,196,255,.9),0 0 60px rgba(120,196,255,.45);">NEW HIGH SCORE</div>\n        </div>`;
+      } else {
+        overlay.textContent = 'GAME OVER';
+        overlay.classList.add('visible');
+      }
       gameOverFlag = true;
-      if (location.search.includes('debug=1')) console.debug('[tetris] game over');
+      if (location.search.includes('debug=1')) console.debug('[tetris] game over (newHighThisRun=', newHighThisRun, ')');
     }
     ,onHighScore: (val:number) => {
       if (highEl) highEl.textContent = nf.format(val);
@@ -121,14 +126,9 @@ function boot() {
         void (highBadge as HTMLElement).offsetWidth;
         highBadge.classList.add('badge-pop');
       }
-      // Show CAP badge (still) and also use game overlay to announce
+      // Mid-run we only show small floating badge; final overlay appears on game over.
       showCapHighBadge();
-      if (overlay) {
-        overlay.classList.add('visible');
-        overlay.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:20px;">\n          <img src="/public/cap-badge.png" alt="CAP" style="width:160px;height:auto;filter:drop-shadow(0 0 18px rgba(120,196,255,0.85)) drop-shadow(0 0 38px rgba(102,209,255,0.55));"/>\n          <div style="font-size:46px;letter-spacing:3px;font-weight:800;background:linear-gradient(135deg,#b6dfff,#5fa9ff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 22px rgba(120,196,255,.85),0 0 44px rgba(120,196,255,.35);">NEW HIGH SCORE</div>\n        </div>`;
-        // Remove any countdown/pulse classes to avoid conflicts
-        overlay.classList.remove('ready-pulse','counting');
-      }
+      newHighThisRun = true;
     }
   });
 
@@ -137,6 +137,8 @@ function boot() {
   if (location.search.includes('debug=1')) console.debug('[tetris] game instance created');
 
   startBtn.textContent = 'Start';
+  // Initialize high score display immediately (persists unless reset param used)
+  try { highEl.textContent = nf.format(game.getHighScore()); } catch {}
 
   // After guard above, these elements are guaranteed non-null; assert for TS
   const _startBtn = startBtn!;
