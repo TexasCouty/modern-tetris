@@ -60,6 +60,21 @@ function boot() {
 
   const highBadge = document.querySelector('.high-badge');
   const scoreCardEl = document.getElementById('score');
+  // Dynamically size logo to match score card height for symmetry
+  const logoWrap = document.querySelector('.logo-wrap') as HTMLElement | null;
+  const gameLogo = document.getElementById('gameLogo') as HTMLImageElement | null;
+  function syncLogoHeight() {
+    if (!logoWrap || !gameLogo || !scoreCardEl) return;
+    const h = (scoreCardEl as HTMLElement).offsetHeight;
+    logoWrap.style.height = h + 'px';
+    gameLogo.style.height = '100%';
+    gameLogo.style.width = '100%';
+    gameLogo.style.objectFit = 'contain';
+  }
+  // Run once now; run again after small timeout in case fonts/styles shift height
+  syncLogoHeight();
+  setTimeout(syncLogoHeight, 60);
+  window.addEventListener('resize', () => { syncLogoHeight(); });
   // Prepare CAP high score badge overlay (lazy create) - used only if we want mid-run indicator
   let capHighBadge: HTMLDivElement | null = null; // (Removed floating mid-run high score badge to avoid duplicate logo display.)
   function showCapHighBadge() { /* Removed floating badge logic */ }
